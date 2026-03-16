@@ -1,6 +1,6 @@
 import { Injectable, NotFoundException } from '@nestjs/common';
+import { Prisma, SanctionSeverity, SanctionType } from '@prisma/client';
 import { PrismaService } from '../prisma/prisma.service';
-import { Prisma, SanctionType, SanctionSeverity } from '@prisma/client';
 
 export interface ListSanctionsQuery {
   restaurantId?: string;
@@ -111,45 +111,68 @@ export class SanctionService {
   }
 
   async getStats() {
-    const [
-      totalSanctions,
-      bySeverity,
-      byType,
-      recentMonthCount,
-      verifiedCount,
-    ] = await Promise.all([
+    const [totalCount, typeRows, severityRows, byMonth, byRegion] = await Promise.all([
       this.prisma.sanction.count(),
-      this.prisma.sanction.groupBy({
-        by: ['severity'],
-        _count: { _all: true },
-        orderBy: { _count: { id: 'desc' } },
-      }),
       this.prisma.sanction.groupBy({
         by: ['sanctionType'],
         _count: { _all: true },
-        orderBy: { _count: { id: 'desc' } },
       }),
-      this.prisma.sanction.count({
-        where: {
-          createdAt: {
-            gte: new Date(Date.now() - 30 * 24 * 60 * 60 * 1000),
-          },
-        },
+      this.prisma.sanction.groupBy({
+        by: ['severity'],
+        _count: { _all: true },
       }),
-      this.prisma.sanction.count({ where: { isVerified: true } }),
+      this.prisma.$queryRaw<Array<{ month: string; count: number }>>(Prisma.sql`
+        SELECT
+          TO_CHAR(DATE_TRUNC('month', s.disposition_date), 'YYYY-MM') AS month,
+          COUNT(*)::int AS count
+        FROM sanctions s
+        GROUP BY 1
+        ORDER BY 1 DESC
+      `),
+      this.prisma.$queryRaw<Array<{ regionCode: string; count: number }>>(Prisma.sql`
+        SELECT
+          r.region_code AS "regionCode",
+          COUNT(*)::int AS count
+        FROM sanctions s
+        INNER JOIN restaurants r ON r.id = s.restaurant_id
+        GROUP BY r.region_code
+        ORDER BY count DESC, r.region_code ASC
+      `),
     ]);
 
+    const byTypeRecord = Object.values(SanctionType).reduce<Record<string, number>>(
+      (acc, type) => {
+        acc[type] = 0;
+        return acc;
+      },
+      {},
+    );
+
+    for (const row of typeRows) {
+      byTypeRecord[row.sanctionType] = row._count._all;
+    }
+
+    const bySeverityRecord = Object.values(SanctionSeverity).reduce<Record<string, number>>(
+      (acc, severity) => {
+        acc[severity] = 0;
+        return acc;
+      },
+      {},
+    );
+
+    for (const row of severityRows) {
+      bySeverityRecord[row.severity] = row._count._all;
+    }
+
     return {
-      total: totalSanctions,
-      recentMonth: recentMonthCount,
-      verified: verifiedCount,
-      bySeverity: bySeverity.map((s) => ({
-        severity: s.severity,
-        count: s._count._all,
-      })),
-      byType: byType.map((t) => ({
-        type: t.sanctionType,
-        count: t._count._all,
+      totalCount,
+      byType: byTypeRecord,
+      bySeverity: bySeverityRecord,
+      byMonth,
+      byRegion: byRegion.map((row) => ({
+        regionCode: row.regionCode,
+        regionName: row.regionCode,
+        count: row.count,
       })),
     };
   }
