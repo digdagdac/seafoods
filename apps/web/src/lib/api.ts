@@ -84,8 +84,14 @@ export async function getRestaurantSanctions(restaurantId: string): Promise<Sanc
   return apiFetch(`/v1/restaurants/${restaurantId}/sanctions`)
 }
 
-export async function getRecentSanctions(limit = 10): Promise<SanctionDto[]> {
-  return apiFetch(`/v1/sanctions/recent?limit=${limit}`)
+export async function getRecentSanctions(
+  query: { cursor?: string; limit?: number } = {},
+): Promise<{ sanctions: SanctionDto[]; cursor?: string; hasMore: boolean }> {
+  const params = new URLSearchParams()
+  if (query.cursor) params.set('cursor', query.cursor)
+  if (query.limit) params.set('limit', String(query.limit))
+
+  return apiFetch(`/v1/sanctions/recent?${params.toString()}`)
 }
 
 // ─── Region summary ──────────────────────────────────────────────────────────
@@ -99,6 +105,45 @@ export interface RegionSummary {
   lastUpdatedAt: string
 }
 
-export async function getRegionSummary(regionCode: string): Promise<RegionSummary> {
-  return apiFetch(`/v1/regions/${regionCode}/summary`)
+// ─── Alerts ──────────────────────────────────────────────────────────────────
+
+export interface AlertDto {
+  id: string
+  type: string
+  title: string
+  content: string
+  isRead: boolean
+  createdAt: string
+  data?: any
+}
+
+export async function getAlerts(): Promise<AlertDto[]> {
+  return apiFetch('/v1/alerts')
+}
+
+// ─── Bookmarks ──────────────────────────────────────────────────────────────
+
+export async function getBookmarks(): Promise<RestaurantDto[]> {
+  return apiFetch('/v1/bookmarks')
+}
+
+export async function addBookmark(restaurantId: string): Promise<void> {
+  return apiFetch('/v1/bookmarks', { method: 'POST', body: JSON.stringify({ restaurantId }) })
+}
+
+export async function removeBookmark(restaurantId: string): Promise<void> {
+  return apiFetch(`/v1/bookmarks/${restaurantId}`, { method: 'DELETE' })
+}
+
+// ─── Auth ───────────────────────────────────────────────────────────────────
+
+export interface UserDto {
+  id: string
+  email: string
+  name: string
+  provider: string
+}
+
+export async function getMe(): Promise<UserDto> {
+  return apiFetch('/v1/auth/me')
 }

@@ -10,6 +10,7 @@ interface HeaderProps {
   showBack?: boolean
   showNotification?: boolean
   transparent?: boolean
+  invert?: boolean
   className?: string
   rightSlot?: React.ReactNode
 }
@@ -19,6 +20,7 @@ export function Header({
   showBack = false,
   showNotification = false,
   transparent = false,
+  invert = false,
   className,
   rightSlot,
 }: HeaderProps) {
@@ -27,9 +29,9 @@ export function Header({
   return (
     <header
       className={cn(
-        'sticky top-0 z-40 flex items-center h-14 px-4 gap-2',
+        'sticky top-0 z-40 flex items-center h-14 px-4 gap-2 transition-all duration-200',
         transparent
-          ? 'bg-transparent'
+          ? 'bg-transparent border-none'
           : 'bg-white/95 backdrop-blur-md border-b border-gray-100',
         className,
       )}
@@ -42,7 +44,7 @@ export function Header({
           aria-label="뒤로 가기"
           className={cn(
             'flex items-center justify-center -ml-1 w-9 h-9 rounded-xl',
-            'text-gray-700 hover:bg-gray-100 active:bg-gray-200',
+            invert ? 'text-white hover:bg-white/10' : 'text-gray-700 hover:bg-gray-100 active:bg-gray-200',
             'transition-colors duration-150',
             'focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-navy/40',
           )}
@@ -54,7 +56,10 @@ export function Header({
       {/* Logo / Title */}
       <div className="flex-1 min-w-0">
         {title ? (
-          <h1 className="text-base font-bold text-navy truncate leading-tight">
+          <h1 className={cn(
+            "text-base font-bold truncate leading-tight",
+            invert ? "text-white" : "text-navy"
+          )}>
             {title}
           </h1>
         ) : (
@@ -63,7 +68,10 @@ export function Header({
             aria-label="SafeDeliver 홈으로"
             className="focus-ring rounded inline-flex items-baseline gap-1"
           >
-            <span className="text-lg font-black text-navy tracking-tight">
+            <span className={cn(
+              "text-lg font-black tracking-tight",
+              invert ? "text-white" : "text-navy"
+            )}>
               Safe
             </span>
             <span className="text-lg font-black text-severity-critical tracking-tight">
@@ -75,7 +83,10 @@ export function Header({
 
       {/* Right slot */}
       {rightSlot && (
-        <div className="flex items-center gap-1">
+        <div className={cn(
+            "flex items-center gap-1",
+            invert ? "text-white" : "text-gray-700"
+        )}>
           {rightSlot}
         </div>
       )}
@@ -87,7 +98,7 @@ export function Header({
           aria-label="알림 보기"
           className={cn(
             'flex items-center justify-center w-9 h-9 rounded-xl',
-            'text-gray-700 hover:bg-gray-100 active:bg-gray-200',
+            invert ? 'text-white hover:bg-white/10' : 'text-gray-700 hover:bg-gray-100 active:bg-gray-200',
             'transition-colors duration-150',
             'focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-navy/40',
           )}

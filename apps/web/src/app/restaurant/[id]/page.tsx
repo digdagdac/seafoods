@@ -1,4 +1,6 @@
-import { notFound } from 'next/navigation'
+'use client'
+
+import { useParams, notFound } from 'next/navigation'
 import {
   MapPin,
   Phone,
@@ -10,10 +12,13 @@ import {
   Bookmark,
   Share2,
   Clock,
+  Loader2,
 } from 'lucide-react'
 import { Header } from '@/components/layout/header'
 import { SeverityBadge } from '@/components/ui/severity-badge'
 import { SanctionTimelineItem } from '@/components/ui/sanction-card'
+import { useRestaurant } from '@/hooks/use-restaurants'
+import { useRestaurantSanctions } from '@/hooks/use-sanctions'
 import { formatKoreanDate } from '@/lib/utils'
 import { cn } from '@/lib/utils'
 import {
@@ -23,71 +28,10 @@ import {
   type RestaurantDto,
   type SanctionDto,
 } from '@safedeliver/shared-types'
-import type { Metadata } from 'next'
-
-// ─── Mock data (replace with real fetch) ─────────────────────────────────────
-
-const MOCK_RESTAURANTS: Record<string, RestaurantDto> = {
-  '1': {
-    id: '1',
-    name: '맛있는 치킨',
-    normalizedName: '맛있는치킨',
-    category: '치킨',
-    roadAddress: '서울특별시 강남구 역삼동 123-45',
-    jibunAddress: '서울특별시 강남구 역삼동 123-45',
-    latitude: 37.4979,
-    longitude: 127.0276,
-    regionCode: '1168010100',
-    status: RestaurantStatus.SUSPENDED,
-    totalSanctions: 3,
-    lastSanctionAt: '2024-03-14',
-  },
-}
-
-const MOCK_SANCTIONS: Record<string, SanctionDto[]> = {
-  '1': [
-    {
-      id: 's1',
-      restaurantId: '1',
-      sanctionType: SanctionType.LICENSE_SUSPENSION,
-      severity: SanctionSeverity.HIGH,
-      violationContent: '유통기한 경과 식품 사용 및 보관 기준 위반',
-      dispositionContent: '영업정지 2개월 (2024.03.14 ~ 2024.05.14)',
-      dispositionDate: '2024-03-14',
-      legalBasis: '식품위생법 제75조',
-      source: '서울특별시 강남구청',
-      isVerified: true,
-    },
-    {
-      id: 's2',
-      restaurantId: '1',
-      sanctionType: SanctionType.IMPROVEMENT_ORDER,
-      severity: SanctionSeverity.LOW,
-      violationContent: '조리사 위생교육 미이수',
-      dispositionContent: '시정명령 (30일 이내 이수 완료)',
-      dispositionDate: '2023-11-20',
-      legalBasis: '식품위생법 제41조',
-      source: '서울특별시 강남구청',
-      isVerified: true,
-    },
-    {
-      id: 's3',
-      restaurantId: '1',
-      sanctionType: SanctionType.WARNING,
-      severity: SanctionSeverity.LOW,
-      violationContent: '식품 표시 기준 일부 미준수',
-      dispositionContent: '경고 처분',
-      dispositionDate: '2023-06-05',
-      legalBasis: '식품위생법 제10조',
-      source: '서울특별시 강남구청',
-      isVerified: false,
-    },
-  ],
-}
 
 // ─── Helpers ──────────────────────────────────────────────────────────────────
 
-const STATUS_CONFIG: Record<RestaurantStatus, { label: string; color: string; bg: string; icon: typeof ShieldCheck }> = {
+const STATUS_CONFIG: Record<RestaurantStatus, { label: string; color: string; bg: string; icon: any }> = {
   [RestaurantStatus.ACTIVE]: {
     label: '영업 중',
     color: 'text-emerald-700',
@@ -114,33 +58,27 @@ const STATUS_CONFIG: Record<RestaurantStatus, { label: string; color: string; bg
   },
 }
 
-// ─── Metadata ─────────────────────────────────────────────────────────────────
-
-export async function generateMetadata({
-  params,
-}: {
-  params: { id: string }
-}): Promise<Metadata> {
-  const restaurant = MOCK_RESTAURANTS[params.id]
-  if (!restaurant) return { title: '음식점을 찾을 수 없습니다' }
-
-  return {
-    title: `${restaurant.name} 행정처분 이력`,
-    description: `${restaurant.name}의 행정처분 이력을 확인하세요. 총 ${restaurant.totalSanctions}건의 처분 기록이 있습니다.`,
-  }
-}
-
 // ─── Page component ───────────────────────────────────────────────────────────
 
-export default function RestaurantDetailPage({
-  params,
-}: {
-  params: { id: string }
-}) {
-  const restaurant = MOCK_RESTAURANTS[params.id]
-  if (!restaurant) notFound()
+export default function RestaurantDetailPage() {
+  const params = useParams()
+  const id = params.id as string
 
-  const sanctions = MOCK_SANCTIONS[params.id] ?? []
+  const { data: restaurant, isLoading: isRestaurantLoading, error: restaurantError } = useRestaurant(id)
+  const { data: sanctions = [], isLoading: isSanctionsLoading } = useRestaurantSanctions(id)
+
+  if (isRestaurantLoading) {
+    return (
+      <div className="flex flex-col items-center justify-center h-screen">
+        <Loader2 className="w-8 h-8 animate-spin text-navy/20" />
+      </div>
+    )
+  }
+
+  if (restaurantError || !restaurant) {
+    notFound()
+  }
+
   const statusConfig = STATUS_CONFIG[restaurant.status]
   const StatusIcon = statusConfig.icon
 
@@ -173,7 +111,7 @@ export default function RestaurantDetailPage({
         }
       />
 
-      <div className="animate-slide-up">
+      <div className="animate-slide-up pb-20">
 
         {/* Restaurant hero card */}
         <section
@@ -251,7 +189,7 @@ export default function RestaurantDetailPage({
           <h2 id="stats-heading" className="section-title mb-3">처분 통계</h2>
           <div className="grid grid-cols-3 gap-3">
             <div className="card p-3 text-center">
-              <p className="text-2xl font-black text-navy leading-none">{sanctions.length}</p>
+              <p className="text-2xl font-black text-navy leading-none">{restaurant.totalSanctions}</p>
               <p className="text-2xs text-gray-500 mt-1">총 처분 건수</p>
             </div>
             <div className="card p-3 text-center">
@@ -310,7 +248,11 @@ export default function RestaurantDetailPage({
         >
           <h2 id="timeline-heading" className="section-title mb-4">행정처분 이력</h2>
 
-          {sanctions.length === 0 ? (
+          {isSanctionsLoading ? (
+             <div className="space-y-4">
+               {[1, 2].map(i => <div key={i} className="card h-24 animate-pulse bg-gray-50" />)}
+             </div>
+          ) : sanctions.length === 0 ? (
             <div className="card p-8 text-center">
               <ShieldCheck className="w-10 h-10 text-gray-300 mx-auto mb-3" aria-hidden="true" />
               <p className="text-sm font-medium text-gray-500">행정처분 이력이 없습니다</p>
@@ -333,8 +275,33 @@ export default function RestaurantDetailPage({
           )}
         </section>
 
-        {/* Source attribution */}
+        {/* External links */}
         <section className="px-4 mb-6">
+          <h2 className="section-title mb-3">추가 정보 확인</h2>
+          <div className="grid grid-cols-2 gap-3">
+             <a 
+               href={`https://search.naver.com/search.naver?query=${encodeURIComponent(restaurant.roadAddress + ' ' + restaurant.name)}`}
+               target="_blank"
+               rel="noopener noreferrer"
+               className="flex items-center justify-center gap-2 p-3 bg-[#03C75A] text-white rounded-xl text-sm font-bold"
+             >
+               네이버 검색
+               <ExternalLink className="w-4 h-4" />
+             </a>
+             <a 
+               href={`https://map.kakao.com/?q=${encodeURIComponent(restaurant.roadAddress + ' ' + restaurant.name)}`}
+               target="_blank"
+               rel="noopener noreferrer"
+               className="flex items-center justify-center gap-2 p-3 bg-[#FAE100] text-[#3C1E1E] rounded-xl text-sm font-bold"
+             >
+               카카오맵
+               <ExternalLink className="w-4 h-4" />
+             </a>
+          </div>
+        </section>
+
+        {/* Source attribution */}
+        <section className="px-4">
           <div className="flex items-start gap-2 p-3 bg-gray-50 rounded-xl border border-gray-100">
             <ExternalLink className="w-4 h-4 text-gray-400 flex-shrink-0 mt-0.5" aria-hidden="true" />
             <p className="text-xs text-gray-500 leading-relaxed">
