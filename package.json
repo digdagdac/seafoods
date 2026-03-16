@@ -16,6 +16,8 @@
     "db:studio": "pnpm --filter api db:studio"
   },
   "devDependencies": {
+    "@prisma/client": "5.22.0",
+    "prisma": "5.22.0",
     "turbo": "^2.3.0",
     "typescript": "^5.4.0"
   },

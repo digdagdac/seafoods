@@ -61,7 +61,7 @@ enum RestaurantStatus {
 model Sanction {
   id                  String           @id @default(cuid())
   restaurantId        String           @map("restaurant_id")
-  rawSanctionId       String?          @map("raw_sanction_id")
+  rawSanctionId       String?          @unique @map("raw_sanction_id")
 
   sanctionType        SanctionType     @map("sanction_type")
   severity            SanctionSeverity @default(MEDIUM)
