@@ -1,21 +1,16 @@
-import {
-  Injectable,
-  NotFoundException,
-  ConflictException,
-} from '@nestjs/common';
+import { Injectable, NotFoundException, BadRequestException } from '@nestjs/common';
 import { PrismaService } from '../prisma/prisma.service';
-import { SubscriptionType } from '@prisma/client';
+import { SubscribeRequestDto } from '@safedeliver/dto';
+import { SUBSCRIPTION_TYPES, SubscriptionTypeValue } from './alert.constants';
 
-export interface CreateSubscriptionDto {
-  subscriptionType: SubscriptionType;
+interface SubscriptionItem {
+  subscriptionType: SubscriptionTypeValue;
   targetValue: string;
 }
 
 @Injectable()
 export class AlertService {
   constructor(private prisma: PrismaService) {}
-
-  // ── Notification list ──────────────────────────────────────────────────
 
   async findAlerts(userId: string, onlyUnread = false, cursor?: string, limit = 20) {
     const take = Math.min(limit, 100);
@@ -52,13 +47,17 @@ export class AlertService {
 
     const hasMore = alerts.length > take;
     const items = hasMore ? alerts.slice(0, take) : alerts;
-    const nextCursor = hasMore ? items[items.length - 1].id : undefined;
+    const nextCursor = hasMore ? items[items.length - 1].id : null;
 
+    return { items, cursor: nextCursor, hasMore };
+  }
+
+  async getUnreadCount(userId: string) {
     const unreadCount = await this.prisma.alert.count({
       where: { userId, isRead: false },
     });
 
-    return { items, cursor: nextCursor, hasMore, unreadCount };
+    return { unreadCount };
   }
 
   async markRead(userId: string, alertId: string) {
@@ -86,59 +85,103 @@ export class AlertService {
     return { updated: result.count };
   }
 
-  // ── Subscriptions ──────────────────────────────────────────────────────
-
   async findSubscriptions(userId: string) {
-    const subscriptions = await this.prisma.alertSubscription.findMany({
-      where: { userId },
+    const items = await this.prisma.alertSubscription.findMany({
+      where: { userId, isActive: true },
       orderBy: { createdAt: 'desc' },
     });
 
-    return { items: subscriptions };
+    return { items };
   }
 
-  async createSubscription(userId: string, dto: CreateSubscriptionDto) {
-    const existing = await this.prisma.alertSubscription.findUnique({
-      where: {
-        userId_subscriptionType_targetValue: {
-          userId,
-          subscriptionType: dto.subscriptionType,
-          targetValue: dto.targetValue,
-        },
-      },
-    });
+  async subscribe(userId: string, dto: SubscribeRequestDto) {
+    const targets = this.normalizeSubscribePayload(dto);
 
-    if (existing) {
-      if (existing.isActive) {
-        throw new ConflictException('이미 구독 중입니다');
-      }
-      // Reactivate
-      return this.prisma.alertSubscription.update({
-        where: { id: existing.id },
-        data: { isActive: true },
-      });
+    if (targets.length === 0) {
+      throw new BadRequestException('최소 1개 이상의 구독 대상을 입력하세요');
     }
 
-    return this.prisma.alertSubscription.create({
-      data: {
-        userId,
-        subscriptionType: dto.subscriptionType,
-        targetValue: dto.targetValue,
-      },
-    });
+    let created = 0;
+    let reactivated = 0;
+    let skipped = 0;
+
+    for (const target of targets) {
+      const existing = await this.prisma.alertSubscription.findUnique({
+        where: {
+          userId_subscriptionType_targetValue: {
+            userId,
+            subscriptionType: target.subscriptionType,
+            targetValue: target.targetValue,
+          },
+        },
+      });
+
+      if (!existing) {
+        await this.prisma.alertSubscription.create({
+          data: {
+            userId,
+            subscriptionType: target.subscriptionType,
+            targetValue: target.targetValue,
+          },
+        });
+        created += 1;
+        continue;
+      }
+
+      if (!existing.isActive) {
+        await this.prisma.alertSubscription.update({
+          where: { id: existing.id },
+          data: { isActive: true },
+        });
+        reactivated += 1;
+        continue;
+      }
+
+      skipped += 1;
+    }
+
+    return { created, reactivated, skipped };
   }
 
-  async removeSubscription(userId: string, subscriptionId: string) {
-    const sub = await this.prisma.alertSubscription.findFirst({
+  async unsubscribe(userId: string, subscriptionId: string) {
+    const result = await this.prisma.alertSubscription.updateMany({
       where: { id: subscriptionId, userId },
+      data: { isActive: false },
     });
 
-    if (!sub) {
+    if (result.count === 0) {
       throw new NotFoundException('구독을 찾을 수 없습니다');
     }
 
-    await this.prisma.alertSubscription.delete({ where: { id: subscriptionId } });
-
     return { success: true };
+  }
+
+  private normalizeSubscribePayload(dto: SubscribeRequestDto): SubscriptionItem[] {
+    const normalizeValues = (values?: string[]) =>
+      (values ?? [])
+        .map((value) => value.trim())
+        .filter((value) => value.length > 0);
+
+    const regions = normalizeValues(dto.regions).map((targetValue) => ({
+      subscriptionType: SUBSCRIPTION_TYPES.REGION,
+      targetValue,
+    }));
+    const categories = normalizeValues(dto.categories).map((targetValue) => ({
+      subscriptionType: SUBSCRIPTION_TYPES.CATEGORY,
+      targetValue,
+    }));
+    const restaurantIds = normalizeValues(dto.restaurantIds).map((targetValue) => ({
+      subscriptionType: SUBSCRIPTION_TYPES.RESTAURANT,
+      targetValue,
+    }));
+
+    const deduped = new Map<string, SubscriptionItem>();
+
+    for (const item of [...regions, ...categories, ...restaurantIds]) {
+      const key = `${item.subscriptionType}:${item.targetValue}`;
+      deduped.set(key, item);
+    }
+
+    return [...deduped.values()];
   }
 }
