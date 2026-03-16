@@ -4,6 +4,7 @@ import { Search, X } from 'lucide-react'
 import { useRouter } from 'next/navigation'
 import { useState, useRef, type FormEvent, type KeyboardEvent } from 'react'
 import { cn } from '@/lib/utils'
+import { Button } from './button'
 
 interface SearchBarProps {
   defaultValue?: string
@@ -50,15 +51,9 @@ export function SearchBar({
   }
 
   const sizeClasses = {
-    sm: 'h-10 text-sm px-3',
-    md: 'h-12 text-base px-4',
-    lg: 'h-14 text-base px-5',
-  }
-
-  const iconSize = {
-    sm: 'w-4 h-4',
-    md: 'w-5 h-5',
-    lg: 'w-5 h-5',
+    sm: 'h-10 text-sm',
+    md: 'h-12 text-base',
+    lg: 'h-14 text-base sm:text-lg',
   }
 
   return (
@@ -66,28 +61,26 @@ export function SearchBar({
       role="search"
       aria-label="음식점 검색"
       onSubmit={handleSubmit}
-      className={cn('relative w-full', className)}
+      className={cn('relative w-full group', className)}
     >
       <div
         className={cn(
-          'flex items-center gap-2 w-full rounded-2xl border bg-white transition-all duration-200',
+          'flex items-center gap-2 w-full rounded-2xl border bg-background transition-all duration-300',
           isFocused
-            ? 'border-navy shadow-[0_0_0_3px_rgba(27,43,75,0.12)]'
-            : 'border-gray-200 shadow-card',
+            ? 'border-primary ring-4 ring-primary/10 shadow-lg'
+            : 'border-border shadow-sm group-hover:border-primary/50',
           sizeClasses[size],
+          'px-3 sm:px-4'
         )}
       >
-        {/* Search icon */}
         <Search
           className={cn(
-            'flex-shrink-0 transition-colors duration-150',
-            iconSize[size],
-            isFocused ? 'text-navy' : 'text-gray-400',
+            'flex-shrink-0 transition-colors duration-300 w-5 h-5',
+            isFocused ? 'text-primary' : 'text-muted-foreground',
           )}
           aria-hidden="true"
         />
 
-        {/* Input */}
         <input
           ref={inputRef}
           type="search"
@@ -104,46 +97,39 @@ export function SearchBar({
           spellCheck={false}
           aria-label={placeholder}
           className={cn(
-            'flex-1 min-w-0 bg-transparent outline-none placeholder:text-gray-400',
-            'text-gray-900 font-medium',
-            // Hide the native clear button on webkit
+            'flex-1 min-w-0 bg-transparent border-none outline-none ring-0 focus:ring-0 placeholder:text-muted-foreground/60',
+            'text-foreground font-medium',
             '[&::-webkit-search-cancel-button]:hidden',
           )}
         />
 
-        {/* Clear button */}
         {value && (
-          <button
+          <Button
             type="button"
+            variant="ghost"
+            size="icon"
             onClick={handleClear}
             aria-label="검색어 지우기"
-            className={cn(
-              'flex-shrink-0 flex items-center justify-center rounded-full',
-              'w-5 h-5 bg-gray-200 text-gray-500',
-              'hover:bg-gray-300 transition-colors duration-150',
-              'focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-navy/40',
-            )}
+            className="h-8 w-8 rounded-full hover:bg-muted"
           >
-            <X className="w-3 h-3" aria-hidden="true" />
-          </button>
+            <X className="w-4 h-4 text-muted-foreground" />
+          </Button>
         )}
 
-        {/* Submit button */}
-        <button
+        <div className="h-6 w-px bg-border mx-1 hidden sm:block" />
+
+        <Button
           type="submit"
-          aria-label="검색"
           disabled={!value.trim()}
+          variant={value.trim() ? 'primary' : 'secondary'}
+          size={size === 'sm' ? 'sm' : 'md'}
           className={cn(
-            'flex-shrink-0 flex items-center justify-center rounded-xl',
-            'transition-all duration-150 font-medium text-sm',
-            size === 'sm' ? 'h-7 px-2.5' : 'h-8 px-3',
-            value.trim()
-              ? 'bg-navy text-white hover:bg-navy-medium active:scale-95'
-              : 'bg-gray-100 text-gray-400 cursor-not-allowed',
+            'flex-shrink-0 rounded-xl font-bold transition-all duration-300',
+            size === 'lg' && 'sm:px-6'
           )}
         >
           검색
-        </button>
+        </Button>
       </div>
     </form>
   )

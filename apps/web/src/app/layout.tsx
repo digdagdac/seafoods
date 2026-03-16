@@ -1,6 +1,7 @@
 import type { Metadata, Viewport } from 'next'
 import { Noto_Sans_KR } from 'next/font/google'
 import { BottomNav } from '@/components/layout/bottom-nav'
+import { Sidebar } from '@/components/layout/sidebar'
 import { QueryProvider } from '@/providers/query-provider'
 import './globals.css'
 
@@ -30,15 +31,6 @@ export const metadata: Metadata = {
     description: '배달 음식점의 행정처분 이력을 한눈에 확인하세요.',
     siteName: 'SafeDeliver',
   },
-  twitter: {
-    card: 'summary_large_image',
-    title: 'SafeDeliver - 배달음식점 행정처분 알리미',
-    description: '배달 음식점의 행정처분 이력을 한눈에 확인하세요.',
-  },
-  robots: {
-    index: true,
-    follow: true,
-  },
 }
 
 export const viewport: Viewport = {
@@ -46,32 +38,43 @@ export const viewport: Viewport = {
   initialScale: 1,
   maximumScale: 1,
   userScalable: false,
-  themeColor: '#1B2B4B',
+  themeColor: '#1B2A4A',
   viewportFit: 'cover',
 }
 
-interface RootLayoutProps {
-  children: React.ReactNode
-}
-
-export default function RootLayout({ children }: RootLayoutProps) {
+export default function RootLayout({ children }: { children: React.ReactNode }) {
   return (
-    <html lang="ko" className={notoSansKr.variable}>
-      <body>
+    <html lang="ko" className={notoSansKr.variable} suppressHydrationWarning>
+      <head>
+        <script
+          dangerouslySetInnerHTML={{
+            __html: `
+              (function() {
+                try {
+                  var theme = localStorage.getItem('theme') || 'system';
+                  var supportDarkMode = window.matchMedia('(prefers-color-scheme: dark)').matches === true;
+                  if (theme === 'dark' || (theme === 'system' && supportDarkMode)) {
+                    document.documentElement.classList.add('dark');
+                  } else {
+                    document.documentElement.classList.remove('dark');
+                  }
+                } catch (e) {}
+              })();
+            `,
+          }}
+        />
+      </head>
+      <body className="bg-background text-foreground antialiased min-h-screen">
         <QueryProvider>
-          {/* Skip to main content — accessibility */}
-          <a
-            href="#main-content"
-            className="sr-only focus:not-sr-only focus:fixed focus:top-4 focus:left-4 focus:z-[100] focus:px-4 focus:py-2 focus:bg-navy focus:text-white focus:rounded-lg focus:font-medium"
-          >
-            본문으로 이동
-          </a>
-
-          <main id="main-content" className="page-container">
-            {children}
-          </main>
-
-          <BottomNav />
+          <div className="flex min-h-screen">
+            <Sidebar />
+            <div className="flex-1 flex flex-col min-w-0">
+              <main id="main-content" className="flex-1 relative">
+                {children}
+              </main>
+              <BottomNav />
+            </div>
+          </div>
         </QueryProvider>
       </body>
     </html>

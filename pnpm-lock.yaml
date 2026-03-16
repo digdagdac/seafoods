@@ -8,12 +8,6 @@ importers:
 
   .:
     devDependencies:
-      '@prisma/client':
-        specifier: 5.22.0
-        version: 5.22.0(prisma@5.22.0)
-      prisma:
-        specifier: 5.22.0
-        version: 5.22.0
       turbo:
         specifier: ^2.3.0
         version: 2.8.17
@@ -117,6 +111,12 @@ importers:
 
   apps/web:
     dependencies:
+      '@safedeliver/dto':
+        specifier: workspace:*
+        version: link:../../packages/dto
+      '@safedeliver/shared-types':
+        specifier: workspace:*
+        version: link:../../packages/shared-types
       '@tanstack/react-query':
         specifier: ^5.56.2
         version: 5.90.21(react@18.3.1)
