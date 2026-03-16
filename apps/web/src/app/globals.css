@@ -1,0 +1,123 @@
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+/* Pretendard variable font — loaded via CDN fallback */
+@import url('https://cdn.jsdelivr.net/gh/orioncactus/pretendard@v1.3.9/dist/web/variable/pretendardvariable-dynamic-subset.min.css');
+
+@layer base {
+  :root {
+    --font-noto-sans-kr: 'Noto Sans KR', sans-serif;
+    --font-pretendard: 'Pretendard Variable', sans-serif;
+
+    /* Design token aliases */
+    --color-brand: #1B2B4B;
+    --color-brand-medium: #2C3E6B;
+    --color-brand-tint: #E8ECF5;
+
+    --color-severity-critical: #DC2626;
+    --color-severity-high: #EA580C;
+    --color-severity-medium: #D97706;
+    --color-severity-low: #2563EB;
+    --color-severity-minimal: #64748B;
+
+    --nav-height: 4rem;
+    --safe-bottom: env(safe-area-inset-bottom, 0px);
+  }
+
+  * {
+    box-sizing: border-box;
+  }
+
+  html {
+    -webkit-tap-highlight-color: transparent;
+    -webkit-text-size-adjust: 100%;
+  }
+
+  body {
+    @apply bg-gray-50 text-gray-900 antialiased;
+    font-family: var(--font-pretendard), var(--font-noto-sans-kr), sans-serif;
+    font-feature-settings: 'kern' 1;
+    word-break: keep-all;
+    overflow-wrap: break-word;
+  }
+
+  /* Korean typography: prevent awkward line breaks */
+  p, h1, h2, h3, h4, h5, h6, span, a {
+    word-break: keep-all;
+  }
+
+  /* Remove default button styles */
+  button {
+    cursor: pointer;
+  }
+
+  /* Smooth scrolling */
+  html {
+    scroll-behavior: smooth;
+  }
+}
+
+@layer components {
+  /* Page container — accounts for bottom nav */
+  .page-container {
+    @apply min-h-screen pb-[calc(var(--nav-height)+var(--safe-bottom))];
+  }
+
+  /* Section heading */
+  .section-title {
+    @apply text-base font-bold text-navy tracking-tight;
+  }
+
+  /* Card base */
+  .card {
+    @apply bg-white rounded-2xl shadow-card;
+  }
+
+  /* Focus ring — accessible */
+  .focus-ring {
+    @apply focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-navy/40 focus-visible:ring-offset-2;
+  }
+
+  /* Severity dot */
+  .severity-dot {
+    @apply inline-block w-2 h-2 rounded-full flex-shrink-0;
+  }
+
+  /* Chip / filter pill */
+  .chip {
+    @apply inline-flex items-center gap-1 px-3 py-1.5 rounded-full text-sm font-medium transition-colors duration-150;
+  }
+
+  .chip-active {
+    @apply bg-navy text-white;
+  }
+
+  .chip-inactive {
+    @apply bg-white text-gray-600 border border-gray-200 hover:border-navy/40;
+  }
+}
+
+@layer utilities {
+  /* Hide scrollbar but keep scroll functionality */
+  .scrollbar-none {
+    -ms-overflow-style: none;
+    scrollbar-width: none;
+  }
+  .scrollbar-none::-webkit-scrollbar {
+    display: none;
+  }
+
+  /* Safe area padding utilities */
+  .pb-safe {
+    padding-bottom: env(safe-area-inset-bottom, 0px);
+  }
+  .pt-safe {
+    padding-top: env(safe-area-inset-top, 0px);
+  }
+
+  /* Text balance for headings */
+  .text-balance {
+    text-wrap: balance;
+  }
+}
