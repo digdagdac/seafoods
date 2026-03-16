@@ -3,15 +3,14 @@
 import { ChevronLeft, Bell } from 'lucide-react'
 import Link from 'next/link'
 import { useRouter } from 'next/navigation'
-import { useState, useEffect } from 'react'
 import { cn } from '@/lib/utils'
-import { Button } from '../ui/button'
 
 interface HeaderProps {
   title?: string
   showBack?: boolean
   showNotification?: boolean
   transparent?: boolean
+  invert?: boolean
   className?: string
   rightSlot?: React.ReactNode
 }
@@ -21,48 +20,45 @@ export function Header({
   showBack = false,
   showNotification = false,
   transparent = false,
+  invert = false,
   className,
   rightSlot,
 }: HeaderProps) {
   const router = useRouter()
-  const [isScrolled, setIsScrolled] = useState(false)
-
-  useEffect(() => {
-    const handleScroll = () => {
-      setIsScrolled(window.scrollY > 20)
-    }
-    window.addEventListener('scroll', handleScroll)
-    return () => window.removeEventListener('scroll', handleScroll)
-  }, [])
 
   return (
     <header
       className={cn(
-        'fixed top-0 left-0 right-0 z-40 flex items-center px-4 transition-all duration-300 md:hidden',
-        isScrolled ? 'h-12 bg-background/90 backdrop-blur-lg border-b shadow-sm' : 'h-14 bg-background',
-        transparent && !isScrolled ? 'bg-transparent border-transparent' : '',
+        'sticky top-0 z-40 flex items-center h-14 px-4 gap-2 transition-all duration-200',
+        transparent
+          ? 'bg-transparent border-none'
+          : 'bg-white/95 backdrop-blur-md border-b border-gray-100',
         className,
       )}
     >
-      <div className="flex-none flex items-center">
-        {showBack && (
-          <Button
-            variant="ghost"
-            size="icon"
-            onClick={() => router.back()}
-            aria-label="뒤로 가기"
-            className="h-9 w-9 -ml-2 rounded-full"
-          >
-            <ChevronLeft className="w-5 h-5 stroke-[2.5px]" />
-          </Button>
-        )}
-      </div>
+      {/* Back button */}
+      {showBack && (
+        <button
+          type="button"
+          onClick={() => router.back()}
+          aria-label="뒤로 가기"
+          className={cn(
+            'flex items-center justify-center -ml-1 w-9 h-9 rounded-xl',
+            invert ? 'text-white hover:bg-white/10' : 'text-gray-700 hover:bg-gray-100 active:bg-gray-200',
+            'transition-colors duration-150',
+            'focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-navy/40',
+          )}
+        >
+          <ChevronLeft className="w-5 h-5 stroke-[2px]" aria-hidden="true" />
+        </button>
+      )}
 
-      <div className="flex-1 min-w-0 flex items-center justify-center">
+      {/* Logo / Title */}
+      <div className="flex-1 min-w-0">
         {title ? (
           <h1 className={cn(
-            'font-bold text-foreground truncate transition-all duration-300',
-            isScrolled ? 'text-sm' : 'text-base'
+            "text-base font-bold truncate leading-tight",
+            invert ? "text-white" : "text-navy"
           )}>
             {title}
           </h1>
@@ -72,7 +68,10 @@ export function Header({
             aria-label="SafeDeliver 홈으로"
             className="focus-ring rounded inline-flex items-baseline gap-1"
           >
-            <span className="text-lg font-black text-navy tracking-tight dark:text-white">
+            <span className={cn(
+              "text-lg font-black tracking-tight",
+              invert ? "text-white" : "text-navy"
+            )}>
               Safe
             </span>
             <span className="text-lg font-black text-severity-critical tracking-tight">
@@ -82,22 +81,31 @@ export function Header({
         )}
       </div>
 
-      <div className="flex-none flex items-center gap-1">
-        {rightSlot}
-        {showNotification && (
-          <Link href="/alerts">
-            <Button
-              variant="ghost"
-              size="icon"
-              aria-label="알림 보기"
-              className="h-9 w-9 rounded-full relative"
-            >
-              <Bell className="w-5 h-5" />
-              <span className="absolute top-2 right-2 w-2 h-2 bg-destructive rounded-full border-2 border-background" />
-            </Button>
-          </Link>
-        )}
-      </div>
+      {/* Right slot */}
+      {rightSlot && (
+        <div className={cn(
+            "flex items-center gap-1",
+            invert ? "text-white" : "text-gray-700"
+        )}>
+          {rightSlot}
+        </div>
+      )}
+
+      {/* Notification bell */}
+      {showNotification && (
+        <Link
+          href="/alerts"
+          aria-label="알림 보기"
+          className={cn(
+            'flex items-center justify-center w-9 h-9 rounded-xl',
+            invert ? 'text-white hover:bg-white/10' : 'text-gray-700 hover:bg-gray-100 active:bg-gray-200',
+            'transition-colors duration-150',
+            'focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-navy/40',
+          )}
+        >
+          <Bell className="w-5 h-5" aria-hidden="true" />
+        </Link>
+      )}
     </header>
   )
 }
