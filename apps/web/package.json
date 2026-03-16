@@ -18,7 +18,9 @@
     "zustand": "^5.0.0",
     "lucide-react": "^0.446.0",
     "clsx": "^2.1.1",
-    "tailwind-merge": "^2.5.2"
+    "tailwind-merge": "^2.5.2",
+    "@safedeliver/shared-types": "workspace:*",
+    "@safedeliver/dto": "workspace:*"
   },
   "devDependencies": {
     "typescript": "^5.4.0",

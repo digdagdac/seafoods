@@ -1,11 +1,17 @@
 'use client'
 
 import { useSearchParams, useRouter } from 'next/navigation'
-import { useState, Suspense } from 'react'
-import { SlidersHorizontal, X, MapPin, AlertTriangle, ChevronRight } from 'lucide-react'
+import Link from 'next/link'
+import { useState, Suspense, useMemo } from 'react'
+import { SlidersHorizontal, X, MapPin, AlertTriangle, ChevronRight, Search as SearchIcon, Filter, ArrowUpDown } from 'lucide-react'
 import { Header } from '@/components/layout/header'
 import { SearchBar } from '@/components/ui/search-bar'
 import { SeverityBadge } from '@/components/ui/severity-badge'
+import { PageContainer } from '@/components/layout/page-container'
+import { Card, CardContent } from '@/components/ui/card'
+import { Badge } from '@/components/ui/badge'
+import { Button } from '@/components/ui/button'
+import { Chip } from '@/components/ui/chip'
 import { cn } from '@/lib/utils'
 import { SanctionSeverity, RestaurantStatus } from '@safedeliver/shared-types'
 
@@ -87,18 +93,11 @@ const MOCK_RESULTS = [
   },
 ]
 
-const STATUS_LABEL: Record<RestaurantStatus, string> = {
-  [RestaurantStatus.ACTIVE]: '영업 중',
-  [RestaurantStatus.SUSPENDED]: '영업정지',
-  [RestaurantStatus.CLOSED]: '폐업',
-  [RestaurantStatus.UNKNOWN]: '알 수 없음',
-}
-
-const STATUS_COLOR: Record<RestaurantStatus, string> = {
-  [RestaurantStatus.ACTIVE]: 'text-emerald-600 bg-emerald-50',
-  [RestaurantStatus.SUSPENDED]: 'text-orange-700 bg-orange-50',
-  [RestaurantStatus.CLOSED]: 'text-gray-500 bg-gray-100',
-  [RestaurantStatus.UNKNOWN]: 'text-gray-400 bg-gray-50',
+const STATUS_CONFIG: Record<RestaurantStatus, { label: string, variant: 'secondary' | 'destructive' | 'outline' | 'default' }> = {
+  [RestaurantStatus.ACTIVE]: { label: '영업 중', variant: 'secondary' },
+  [RestaurantStatus.SUSPENDED]: { label: '영업정지', variant: 'destructive' },
+  [RestaurantStatus.CLOSED]: { label: '폐업', variant: 'outline' },
+  [RestaurantStatus.UNKNOWN]: { label: '알 수 없음', variant: 'outline' },
 }
 
 // ─── Main component ───────────────────────────────────────────────────────────
@@ -129,175 +128,173 @@ function SearchContent() {
   const hasActiveFilters = activeFilters.size > 0
 
   return (
-    <>
+    <PageContainer noPadding className="bg-background">
       <Header showBack title="검색 결과" />
 
-      {/* Search bar */}
-      <div className="sticky top-14 z-30 bg-white border-b border-gray-100 px-4 py-3">
-        <SearchBar defaultValue={query} size="md" />
-      </div>
-
-      {/* Filter chips — horizontally scrollable */}
-      <div className="sticky top-[calc(3.5rem+3.5rem)] z-20 bg-white border-b border-gray-100">
-        <div
-          className="flex items-center gap-2 px-4 py-2.5 overflow-x-auto scrollbar-none"
-          role="group"
-          aria-label="검색 필터"
-        >
-          {/* Clear button */}
-          {hasActiveFilters && (
-            <button
-              type="button"
-              onClick={clearFilters}
-              aria-label="필터 초기화"
-              className="flex-shrink-0 chip chip-active gap-1 animate-fade-in"
-            >
-              <X className="w-3 h-3" aria-hidden="true" />
-              {activeFilters.size}개 선택됨
-            </button>
-          )}
-
-          {FILTER_CHIPS.map((chip) => {
-            const active = activeFilters.has(chip.id)
-            return (
-              <button
-                key={chip.id}
-                type="button"
-                onClick={() => toggleFilter(chip.id)}
-                aria-pressed={active}
-                aria-label={`${chip.label} 필터 ${active ? '해제' : '적용'}`}
-                className={cn('flex-shrink-0 chip', active ? 'chip-active' : 'chip-inactive')}
-              >
-                {chip.label}
-              </button>
-            )
-          })}
-        </div>
-
-        {/* Sort options */}
-        <div className="flex items-center gap-1 px-4 pb-2.5" role="group" aria-label="정렬 기준">
-          <span className="text-xs text-gray-400 mr-1">정렬:</span>
-          {[
-            { id: 'recent', label: '최신순' },
-            { id: 'severity', label: '심각도순' },
-            { id: 'count', label: '처분건수순' },
-          ].map((opt) => (
-            <button
-              key={opt.id}
-              type="button"
-              onClick={() => setSortBy(opt.id as typeof sortBy)}
-              aria-pressed={sortBy === opt.id}
-              className={cn(
-                'text-xs px-2.5 py-1 rounded-full font-medium transition-colors duration-150',
-                sortBy === opt.id
-                  ? 'bg-navy text-white'
-                  : 'text-gray-500 hover:text-navy',
+      {/* Desktop sidebar layout placeholder - real sidebar is in layout.tsx */}
+      <div className="flex flex-col w-full max-w-6xl mx-auto">
+        
+        {/* Search & Header Section */}
+        <section className="bg-background border-b sticky top-12 sm:top-0 z-30 px-4 sm:px-8 py-4 sm:py-8 space-y-4 sm:space-y-6">
+          <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
+            <h2 className="text-xl sm:text-2xl font-bold flex items-center gap-2">
+              <SearchIcon className="w-6 h-6 text-primary" />
+              음식점 검색
+            </h2>
+            <div className="flex items-center gap-2 text-sm text-muted-foreground">
+              {query && (
+                <span>
+                  <span className="font-bold text-foreground">"{query}"</span> 검색 결과
+                </span>
               )}
-            >
-              {opt.label}
-            </button>
-          ))}
-        </div>
-      </div>
-
-      {/* Results */}
-      <div className="px-4 pt-4">
-        {/* Result count */}
-        <p className="text-xs text-gray-400 mb-3" aria-live="polite">
-          {query ? (
-            <>
-              <span className="font-semibold text-navy">"{query}"</span> 검색 결과{' '}
-              <span className="font-semibold text-navy">{MOCK_RESULTS.length}건</span>
-            </>
-          ) : (
-            `전체 ${MOCK_RESULTS.length}건`
-          )}
-        </p>
-
-        <ul role="list" className="space-y-3" aria-label="검색 결과 목록">
-          {MOCK_RESULTS.map((restaurant, idx) => (
-            <li key={restaurant.id} className="animate-fade-in" style={{ animationDelay: `${idx * 50}ms` }}>
-              <a
-                href={`/restaurant/${restaurant.id}`}
-                className="block card p-4 hover:shadow-card-hover transition-shadow duration-150 focus-ring"
-                aria-label={`${restaurant.name} 상세 보기`}
-              >
-                <div className="flex items-start gap-3">
-                  {/* Left: info */}
-                  <div className="flex-1 min-w-0">
-                    <div className="flex items-center gap-2 mb-1">
-                      <SeverityBadge severity={restaurant.lastSeverity} variant="compact" />
-                      <span
-                        className={cn(
-                          'text-2xs font-medium px-1.5 py-0.5 rounded-full',
-                          STATUS_COLOR[restaurant.status],
-                        )}
-                      >
-                        {STATUS_LABEL[restaurant.status]}
-                      </span>
-                    </div>
-
-                    <h3 className="text-sm font-bold text-navy line-clamp-1 mb-0.5">
-                      {restaurant.name}
-                    </h3>
-
-                    <p className="flex items-center gap-1 text-xs text-gray-500 mb-2">
-                      <MapPin className="w-3 h-3 flex-shrink-0" aria-hidden="true" />
-                      <span className="truncate">{restaurant.address}</span>
-                    </p>
-
-                    <div className="flex items-center gap-3 text-2xs text-gray-400">
-                      <span className="flex items-center gap-1">
-                        <AlertTriangle className="w-3 h-3" aria-hidden="true" />
-                        처분 {restaurant.totalSanctions}건
-                      </span>
-                      <span>최근: {restaurant.lastSanctionDate}</span>
-                      <span className="text-gray-300">·</span>
-                      <span>{restaurant.category}</span>
-                    </div>
-                  </div>
-
-                  {/* Right: arrow */}
-                  <ChevronRight
-                    className="w-4 h-4 text-gray-300 flex-shrink-0 mt-1"
-                    aria-hidden="true"
-                  />
-                </div>
-              </a>
-            </li>
-          ))}
-        </ul>
-
-        {/* Empty state */}
-        {MOCK_RESULTS.length === 0 && (
-          <div className="flex flex-col items-center justify-center py-16 text-center">
-            <div className="w-16 h-16 rounded-full bg-gray-100 flex items-center justify-center mb-4">
-              <AlertTriangle className="w-8 h-8 text-gray-300" aria-hidden="true" />
+              <Badge variant="secondary" className="font-bold">
+                {MOCK_RESULTS.length}건
+              </Badge>
             </div>
-            <h3 className="text-base font-bold text-gray-700 mb-1">검색 결과가 없습니다</h3>
-            <p className="text-sm text-gray-400">
-              다른 검색어나 필터를 사용해 보세요
-            </p>
           </div>
-        )}
+          <SearchBar defaultValue={query} size="lg" className="max-w-3xl" />
+        </section>
 
-        {/* Load more */}
-        <div className="py-4 flex justify-center">
-          <button
-            type="button"
-            className="px-6 py-2.5 rounded-xl border border-gray-200 text-sm font-medium text-gray-600 hover:border-navy/30 hover:text-navy transition-colors duration-150 focus-ring"
-          >
-            더 보기
-          </button>
+        {/* Filter & Sort Section */}
+        <section className="sticky top-[calc(3rem+4rem)] sm:top-[calc(6.5rem)] z-20 bg-background/90 backdrop-blur-md border-b px-4 sm:px-8 py-3 space-y-3">
+          <div className="flex flex-col sm:flex-row sm:items-center gap-4">
+            <div className="flex items-center gap-2 overflow-x-auto scrollbar-none pb-1 sm:pb-0 flex-1">
+              <div className="flex-shrink-0 flex items-center gap-1.5 pr-2 border-r mr-2">
+                <Filter className="w-4 h-4 text-primary" />
+                <span className="text-xs font-bold whitespace-nowrap">필터</span>
+              </div>
+              
+              {hasActiveFilters && (
+                <Chip
+                  label={`${activeFilters.size}개 초기화`}
+                  onClick={clearFilters}
+                  active
+                  className="bg-primary/20 text-primary hover:bg-primary/30"
+                />
+              )}
+
+              {FILTER_CHIPS.map((chip) => (
+                <Chip
+                  key={chip.id}
+                  label={chip.label}
+                  active={activeFilters.has(chip.id)}
+                  onClick={() => toggleFilter(chip.id)}
+                />
+              ))}
+            </div>
+
+            <div className="flex items-center gap-2 flex-shrink-0 border-t sm:border-t-0 pt-2 sm:pt-0">
+              <ArrowUpDown className="w-4 h-4 text-muted-foreground" />
+              <div className="flex items-center p-1 bg-muted rounded-lg text-xs font-bold">
+                {[
+                  { id: 'recent', label: '최신순' },
+                  { id: 'severity', label: '심각도' },
+                  { id: 'count', label: '처분건수' },
+                ].map((opt) => (
+                  <button
+                    key={opt.id}
+                    onClick={() => setSortBy(opt.id as any)}
+                    className={cn(
+                      "px-3 py-1.5 rounded-md transition-all",
+                      sortBy === opt.id ? "bg-background shadow-sm text-primary" : "text-muted-foreground hover:text-foreground"
+                    )}
+                  >
+                    {opt.label}
+                  </button>
+                ))}
+              </div>
+            </div>
+          </div>
+        </section>
+
+        {/* Results Grid */}
+        <div className="px-4 sm:px-8 py-6">
+          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
+            {MOCK_RESULTS.map((restaurant, idx) => {
+              const status = STATUS_CONFIG[restaurant.status]
+              return (
+                <Link
+                  key={restaurant.id}
+                  href={`/restaurant/${restaurant.id}`}
+                  className="group animate-fade-in"
+                  style={{ animationDelay: `${idx * 50}ms` }}
+                >
+                  <Card hover className="h-full border-muted/50 transition-all duration-300">
+                    <CardContent className="p-5 flex flex-col h-full">
+                      <div className="flex items-start justify-between gap-3 mb-4">
+                        <div className="flex flex-wrap items-center gap-2">
+                          <SeverityBadge severity={restaurant.lastSeverity} variant="compact" />
+                          <Badge variant={status.variant} className="text-[10px] h-5 uppercase font-bold">
+                            {status.label}
+                          </Badge>
+                        </div>
+                        <div className="p-1.5 rounded-full bg-muted group-hover:bg-primary/10 transition-colors">
+                          <ChevronRight className="w-4 h-4 text-muted-foreground group-hover:text-primary transition-colors" />
+                        </div>
+                      </div>
+
+                      <h3 className="text-base sm:text-lg font-bold text-foreground group-hover:text-primary transition-colors line-clamp-1 mb-2">
+                        {restaurant.name}
+                      </h3>
+
+                      <p className="flex items-center gap-1.5 text-xs text-muted-foreground mb-4 line-clamp-1">
+                        <MapPin className="w-3.5 h-3.5 flex-shrink-0" aria-hidden="true" />
+                        <span>{restaurant.address}</span>
+                      </p>
+
+                      <div className="mt-auto pt-4 border-t flex items-center justify-between text-[11px] font-bold text-muted-foreground">
+                        <div className="flex items-center gap-3">
+                          <span className="flex items-center gap-1">
+                            <AlertTriangle className="w-3.5 h-3.5 text-amber-500" />
+                            처분 {restaurant.totalSanctions}건
+                          </span>
+                          <span className="opacity-30">|</span>
+                          <span>{restaurant.category}</span>
+                        </div>
+                        <time className="italic opacity-60">최근 {restaurant.lastSanctionDate}</time>
+                      </div>
+                    </CardContent>
+                  </Card>
+                </Link>
+              )
+            })}
+          </div>
+
+          {/* Empty state */}
+          {MOCK_RESULTS.length === 0 && (
+            <div className="flex flex-col items-center justify-center py-24 text-center max-w-sm mx-auto">
+              <div className="w-20 h-20 rounded-full bg-muted flex items-center justify-center mb-6">
+                <SearchIcon className="w-10 h-10 text-muted-foreground/30" aria-hidden="true" />
+              </div>
+              <h3 className="text-xl font-bold text-foreground mb-2">검색 결과가 없습니다</h3>
+              <p className="text-sm text-muted-foreground leading-relaxed">
+                검색어를 확인하거나 필터를 초기화하여<br />다시 시도해 보세요.
+              </p>
+              <Button onClick={clearFilters} variant="outline" className="mt-6 rounded-xl font-bold">
+                필터 초기화하기
+              </Button>
+            </div>
+          )}
+
+          {/* Load more */}
+          <div className="py-12 flex flex-col items-center gap-4">
+            <p className="text-xs font-bold text-muted-foreground uppercase tracking-widest">Showing {MOCK_RESULTS.length} of 142 restaurants</p>
+            <Button
+              variant="outline"
+              className="h-11 px-10 rounded-2xl font-bold border-2 hover:bg-primary/5 hover:border-primary/30 transition-all"
+            >
+              더 보기
+            </Button>
+          </div>
         </div>
       </div>
-    </>
+    </PageContainer>
   )
 }
 
 export default function SearchPage() {
   return (
-    <Suspense fallback={<div className="flex items-center justify-center h-64 text-gray-400 text-sm">로딩 중...</div>}>
+    <Suspense fallback={<div className="flex items-center justify-center h-64 text-muted-foreground font-bold animate-pulse uppercase tracking-widest text-xs">Searching for safety...</div>}>
       <SearchContent />
     </Suspense>
   )
