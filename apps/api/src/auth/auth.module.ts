@@ -5,6 +5,10 @@ import { ConfigModule, ConfigService } from '@nestjs/config';
 import { AuthController } from './auth.controller';
 import { AuthService } from './auth.service';
 import { JwtStrategy } from './jwt.strategy';
+import { LoginRateLimiterService } from './login-rate-limiter.service';
+import { KakaoStrategy } from './strategies/kakao.strategy';
+import { NaverStrategy } from './strategies/naver.strategy';
+import { GoogleStrategy } from './strategies/google.strategy';
 
 @Module({
   imports: [
@@ -15,13 +19,20 @@ import { JwtStrategy } from './jwt.strategy';
       useFactory: (configService: ConfigService) => ({
         secret: configService.getOrThrow<string>('JWT_SECRET'),
         signOptions: {
-          expiresIn: configService.get<string>('JWT_EXPIRES_IN', '7d'),
+          expiresIn: configService.get<string>('JWT_EXPIRES_IN', '15m'),
         },
       }),
     }),
   ],
   controllers: [AuthController],
-  providers: [AuthService, JwtStrategy],
+  providers: [
+    AuthService,
+    JwtStrategy,
+    LoginRateLimiterService,
+    KakaoStrategy,
+    NaverStrategy,
+    GoogleStrategy,
+  ],
   exports: [AuthService, JwtModule],
 })
 export class AuthModule {}

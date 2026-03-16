@@ -1,41 +1,38 @@
-# Task: 검색/필터링 API 완성
+# Task: 인증/소셜로그인 완성
 
-## 브랜치: feature/search-filter
+## 브랜치: feature/auth-social
 ## 역할: Backend Developer
 
 ### 목표
-pg_trgm 기반 한국어 퍼지 검색 + 다중 필터링 API 완성
+JWT 인증 플로우 + 카카오/네이버/구글 소셜 로그인 완성
 
 ### 구현 요구사항
 
-1. **apps/api/src/search/search.service.ts 개선**
-   - pg_trgm similarity() 기반 한국어 퍼지 검색
-   - 자동완성 API (2글자 이상 입력 시)
-   - 검색 결과에 행정처분 이력 포함 (JOIN)
+1. **JWT 인증 완성**
+   - `apps/api/src/auth/auth.service.ts` - Access + Refresh 토큰 발급
+   - `apps/api/src/auth/dto/` - 요청/응답 DTO (Zod validation)
+   - 토큰 갱신 API (POST /auth/refresh)
+   - 로그아웃 (refresh token 무효화)
 
-2. **필터링 시스템 구현**
-   - `apps/api/src/search/dto/search-query.dto.ts` - Zod/class-validator 기반 DTO
-   - 지역 필터 (시/도, 시/군/구)
-   - 처분 유형 필터 (SanctionType enum)
-   - 기간 필터 (dateFrom, dateTo)
-   - 심각도 필터 (severity)
-   - 행정처분 유무 필터 (hasSanction boolean)
+2. **소셜 로그인 구현**
+   - `apps/api/src/auth/strategies/kakao.strategy.ts` - 카카오 OAuth2
+   - `apps/api/src/auth/strategies/naver.strategy.ts` - 네이버 OAuth2
+   - `apps/api/src/auth/strategies/google.strategy.ts` - 구글 OAuth2
+   - 공통: 첫 로그인 시 자동 회원가입 (upsert)
 
-3. **정렬/페이지네이션**
-   - 커서 기반 페이지네이션 (cursor + limit)
-   - 정렬: relevance(기본), date_desc, date_asc, severity
+3. **사용자 프로필**
+   - GET /auth/me - 프로필 조회
+   - PATCH /auth/me - 프로필 수정 (이름, 알림 설정)
+   - DELETE /auth/me - 회원 탈퇴 (soft delete or cascade)
 
-4. **주변 검색 API**
-   - PostGIS ST_DWithin 기반 반경 검색
-   - `apps/api/src/restaurant/restaurant.service.ts` nearby 메서드 완성
-
-5. **통계 API**
-   - `apps/api/src/sanction/sanction.service.ts`에 getStats() 추가
-   - 유형별/심각도별/월별/지역별 통계
+4. **보안**
+   - bcrypt 비밀번호 해싱
+   - Rate limiting (로그인 시도 제한)
+   - CORS 설정 강화
 
 ### 참조
-- packages/dto/src/index.ts의 SearchRequestDto, NearbyRequestDto
-- prisma/schema.prisma 모델 구조
+- .env.example의 OAuth 관련 환경변수
+- prisma/schema.prisma User, AuthProvider 모델
 
 ### 작업 완료 후
-- git add && git commit -m "feat(search): 검색/필터링/통계 API 완성"
+- git add && git commit -m "feat(auth): JWT + 소셜로그인 구현"

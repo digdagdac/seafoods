@@ -5,26 +5,42 @@ import { SwaggerModule, DocumentBuilder } from '@nestjs/swagger';
 import { ConfigService } from '@nestjs/config';
 import { AppModule } from './app.module';
 
+function parseAllowedOrigins(configService: ConfigService) {
+  const envOrigins = configService
+    .get<string>('ALLOWED_ORIGINS', '')
+    .split(',')
+    .map((origin) => origin.trim())
+    .filter(Boolean);
+
+  const webUrl = configService.get<string>('WEB_URL', 'http://localhost:3000');
+
+  return new Set([webUrl, ...envOrigins]);
+}
+
 async function bootstrap() {
   const app = await NestFactory.create(AppModule);
 
   const configService = app.get(ConfigService);
   const port = configService.get<number>('PORT', 3001);
+  const allowedOrigins = parseAllowedOrigins(configService);
 
-  // Global prefix
   app.setGlobalPrefix('api/v1');
 
-  // CORS
   app.enableCors({
-    origin: [
-      'http://localhost:3000',
-      'http://localhost:3001',
-      ...(configService.get<string>('ALLOWED_ORIGINS', '').split(',').filter(Boolean)),
-    ],
+    origin: (origin, callback) => {
+      if (!origin || allowedOrigins.has(origin)) {
+        callback(null, true);
+        return;
+      }
+
+      callback(new Error('CORS origin not allowed'), false);
+    },
     credentials: true,
+    methods: ['GET', 'HEAD', 'PUT', 'PATCH', 'POST', 'DELETE', 'OPTIONS'],
+    allowedHeaders: ['Authorization', 'Content-Type', 'X-Requested-With'],
+    maxAge: 60 * 60 * 24,
   });
 
-  // Global validation pipe
   app.useGlobalPipes(
     new ValidationPipe({
       whitelist: true,
@@ -36,7 +52,6 @@ async function bootstrap() {
     }),
   );
 
-  // Swagger
   const swaggerConfig = new DocumentBuilder()
     .setTitle('SafeDeliver API')
     .setDescription('배달음식점 행정처분 알리미 REST API')
