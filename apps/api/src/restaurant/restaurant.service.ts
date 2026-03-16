@@ -1,6 +1,6 @@
 import { Injectable, NotFoundException } from '@nestjs/common';
-import { PrismaService } from '../prisma/prisma.service';
 import { Prisma, RestaurantStatus } from '@prisma/client';
+import { PrismaService } from '../prisma/prisma.service';
 
 export interface ListRestaurantsQuery {
   q?: string;
@@ -19,6 +19,37 @@ export interface NearbyQuery {
   hasSanction?: boolean;
   cursor?: string;
   limit?: number;
+}
+
+interface NearbyCursorPayload {
+  id: string;
+  distanceMeters: number;
+}
+
+function encodeNearbyCursor(payload: NearbyCursorPayload): string {
+  return Buffer.from(JSON.stringify(payload)).toString('base64url');
+}
+
+function decodeNearbyCursor(cursor?: string): NearbyCursorPayload | null {
+  if (!cursor) {
+    return null;
+  }
+
+  try {
+    const payload = JSON.parse(Buffer.from(cursor, 'base64url').toString('utf8')) as NearbyCursorPayload;
+    if (
+      !payload ||
+      typeof payload !== 'object' ||
+      typeof payload.id !== 'string' ||
+      typeof payload.distanceMeters !== 'number'
+    ) {
+      return null;
+    }
+
+    return payload;
+  } catch {
+    return null;
+  }
 }
 
 @Injectable()
@@ -166,17 +197,25 @@ export class RestaurantService {
   async findNearby(query: NearbyQuery) {
     const { lat, lng, radius = 1000, hasSanction, limit = 20 } = query;
     const take = Math.min(limit, 100);
+    const decodedCursor = decodeNearbyCursor(query.cursor);
 
-    // PostGIS ST_DWithin: radius in meters, geography uses meters
-    const hasSanctionFilter =
+    const sanctionClause =
       hasSanction === true
-        ? 'AND r.total_sanctions > 0'
+        ? Prisma.sql`AND r.total_sanctions > 0`
         : hasSanction === false
-          ? 'AND r.total_sanctions = 0'
-          : '';
+          ? Prisma.sql`AND r.total_sanctions = 0`
+          : Prisma.empty;
 
-    const cursorClause = query.cursor
-      ? `AND r.id > ${Prisma.sql`${query.cursor}`}`
+    const cursorClause = decodedCursor
+      ? Prisma.sql`
+          WHERE (
+            base.distance_meters > ${decodedCursor.distanceMeters}
+            OR (
+              base.distance_meters = ${decodedCursor.distanceMeters}
+              AND base.id > ${decodedCursor.id}
+            )
+          )
+        `
       : Prisma.empty;
 
     const results = await this.prisma.$queryRaw<
@@ -196,40 +235,63 @@ export class RestaurantService {
       }>
     >(
       Prisma.sql`
+        WITH base AS (
+          SELECT
+            r.id,
+            r.name,
+            r.normalized_name,
+            r.category,
+            r.road_address,
+            r.latitude,
+            r.longitude,
+            r.region_code,
+            r.status,
+            r.total_sanctions,
+            r.last_sanction_at,
+            ST_Distance(
+              ST_MakePoint(r.longitude, r.latitude)::geography,
+              ST_MakePoint(${lng}, ${lat})::geography
+            ) AS distance_meters
+          FROM restaurants r
+          WHERE
+            r.latitude IS NOT NULL
+            AND r.longitude IS NOT NULL
+            AND ST_DWithin(
+              ST_MakePoint(r.longitude, r.latitude)::geography,
+              ST_MakePoint(${lng}, ${lat})::geography,
+              ${radius}
+            )
+            ${sanctionClause}
+        )
         SELECT
-          r.id,
-          r.name,
-          r.normalized_name,
-          r.category,
-          r.road_address,
-          r.latitude,
-          r.longitude,
-          r.region_code,
-          r.status,
-          r.total_sanctions,
-          r.last_sanction_at,
-          ST_Distance(
-            ST_MakePoint(r.longitude, r.latitude)::geography,
-            ST_MakePoint(${lng}, ${lat})::geography
-          ) AS distance_meters
-        FROM restaurants r
-        WHERE
-          r.latitude IS NOT NULL
-          AND r.longitude IS NOT NULL
-          AND ST_DWithin(
-            ST_MakePoint(r.longitude, r.latitude)::geography,
-            ST_MakePoint(${lng}, ${lat})::geography,
-            ${radius}
-          )
-          ${Prisma.raw(hasSanctionFilter)}
-        ORDER BY distance_meters ASC
+          base.id,
+          base.name,
+          base.normalized_name,
+          base.category,
+          base.road_address,
+          base.latitude,
+          base.longitude,
+          base.region_code,
+          base.status,
+          base.total_sanctions,
+          base.last_sanction_at,
+          base.distance_meters
+        FROM base
+        ${cursorClause}
+        ORDER BY base.distance_meters ASC, base.id ASC
         LIMIT ${take + 1}
       `,
     );
 
     const hasMore = results.length > take;
     const items = hasMore ? results.slice(0, take) : results;
-    const nextCursor = hasMore ? items[items.length - 1].id : undefined;
+
+    const nextCursor = hasMore
+      ? encodeNearbyCursor({
+          id: items[items.length - 1].id,
+          distanceMeters: Number(items[items.length - 1].distance_meters),
+        })
+      : undefined;
 
     return {
       items: items.map((r) => ({
@@ -244,7 +306,7 @@ export class RestaurantService {
         status: r.status,
         totalSanctions: r.total_sanctions,
         lastSanctionAt: r.last_sanction_at,
-        distanceMeters: Math.round(r.distance_meters),
+        distanceMeters: Math.round(Number(r.distance_meters)),
       })),
       cursor: nextCursor,
       hasMore,
