@@ -21,7 +21,7 @@ const SEVERITY_BG: Record<SanctionSeverity, string> = {
 }
 
 function RegionalSummary() {
-  const { data: summary, isLoading } = useRegionSummary('11') // Default to Seoul
+  const { data: summary, isLoading, isError } = useRegionSummary('11') // Default to Seoul
 
   if (isLoading) {
     return (
@@ -33,6 +33,14 @@ function RegionalSummary() {
           <div className="h-16 bg-gray-100 rounded-xl" />
         </div>
         <div className="h-10 bg-gray-200 rounded-xl" />
+      </div>
+    )
+  }
+
+  if (isError) {
+    return (
+      <div className="card p-4 text-center text-sm text-gray-500">
+        지역 정보를 불러올 수 없습니다. API 키를 설정해주세요.
       </div>
     )
   }
@@ -89,6 +97,7 @@ function RecentSanctionsFeed() {
   const {
     data,
     isLoading,
+    isError,
     hasNextPage,
     fetchNextPage,
     isFetchingNextPage,
@@ -104,7 +113,15 @@ function RecentSanctionsFeed() {
     )
   }
 
-  const sanctions = data?.pages.flatMap((page) => page.sanctions) ?? []
+  if (isError) {
+    return (
+      <div className="card p-6 text-center text-sm text-gray-500">
+        데이터를 불러올 수 없습니다. API 키를 설정해주세요.
+      </div>
+    )
+  }
+
+  const sanctions = data?.pages.flatMap((page) => page.items) ?? []
 
   return (
     <section aria-labelledby="recent-sanctions-heading">

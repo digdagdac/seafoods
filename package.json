@@ -4,7 +4,8 @@
   "private": true,
   "description": "배달음식점 행정처분 알리미 - 소비자를 위한 식품 안전 정보 플랫폼",
   "scripts": {
-    "dev": "turbo run dev",
+    "dev": "turbo run dev --filter=web",
+    "dev:full": "turbo run dev",
     "build": "turbo run build",
     "lint": "turbo run lint",
     "test": "turbo run test",

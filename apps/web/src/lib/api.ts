@@ -1,4 +1,4 @@
-const API_BASE_URL = process.env.NEXT_PUBLIC_API_URL ?? 'http://localhost:4000/api/v1'
+const API_BASE_URL = '/api'
 
 class ApiError extends Error {
   constructor(
@@ -108,10 +108,11 @@ export async function getRestaurantSanctions(restaurantId: string) {
 
 export async function getRecentSanctions(query: { cursor?: string; limit?: number } = {}) {
   const params = new URLSearchParams()
+  params.set('sort', 'recent')
   if (query.cursor) params.set('cursor', query.cursor)
   if (query.limit) params.set('limit', String(query.limit))
 
-  return apiFetch<{ items: SanctionItem[] }>(`/sanctions/recent?${params.toString()}`)
+  return apiFetch<{ items: SanctionItem[]; cursor?: string; hasMore: boolean }>(`/sanctions?${params.toString()}`)
 }
 
 export async function getSanctionStats() {
@@ -135,9 +136,9 @@ export interface RegionSummary {
   lastUpdatedAt: string
 }
 
-export async function getRegionSummary(): Promise<RegionSummary[]> {
+export async function getRegionSummary(regionCode?: string): Promise<RegionSummary | null> {
   const stats = await getSanctionStats()
-  return stats.byRegion.map((r) => ({
+  const regions = stats.byRegion.map((r) => ({
     regionCode: r.regionCode,
     regionName: r.regionName,
     totalSanctions: r.count,
@@ -145,9 +146,14 @@ export async function getRegionSummary(): Promise<RegionSummary[]> {
     highCount: 0,
     lastUpdatedAt: new Date().toISOString(),
   }))
+  if (regionCode) {
+    return regions.find((r) => r.regionCode === regionCode) ?? regions[0] ?? null
+  }
+  return regions[0] ?? null
 }
 
 // ─── Alerts ──────────────────────────────────────────────────────────────────
+// TODO: needs backend for user-specific data
 
 export interface AlertDto {
   id: string
@@ -166,41 +172,46 @@ export interface AlertDto {
   }
 }
 
-export async function getAlerts() {
-  return apiFetch<{ items: AlertDto[]; cursor: string | null; hasMore: boolean }>('/alerts')
+export async function getAlerts(): Promise<{ items: AlertDto[]; cursor: string | null; hasMore: boolean }> {
+  // TODO: needs backend for user-specific data
+  return { items: [], cursor: null, hasMore: false }
 }
 
-export async function markAlertAsRead(alertId: string) {
-  return apiFetch<{ id: string; isRead: boolean; readAt: string }>(`/alerts/${alertId}/read`, {
-    method: 'PATCH',
-  })
+export async function markAlertAsRead(_alertId: string): Promise<{ id: string; isRead: boolean; readAt: string }> {
+  // TODO: needs backend for user-specific data
+  throw new ApiError('NOT_IMPLEMENTED', '알림 기능은 아직 준비 중입니다.')
 }
 
-export async function markAllAlertsAsRead() {
-  return apiFetch<{ updated: number }>('/alerts/read-all', {
-    method: 'PATCH',
-  })
+export async function markAllAlertsAsRead(): Promise<{ updated: number }> {
+  // TODO: needs backend for user-specific data
+  return { updated: 0 }
 }
 
-export async function getUnreadAlertCount() {
-  return apiFetch<{ unreadCount: number }>('/alerts/unread-count')
+export async function getUnreadAlertCount(): Promise<{ unreadCount: number }> {
+  // TODO: needs backend for user-specific data
+  return { unreadCount: 0 }
 }
 
 // ─── Bookmarks ──────────────────────────────────────────────────────────────
+// TODO: needs backend for user-specific data
 
-export async function getBookmarks() {
-  return apiFetch<{ items: Array<{ id: string; createdAt: string; restaurant: RestaurantItem }> }>('/bookmarks')
+export async function getBookmarks(): Promise<{ items: Array<{ id: string; createdAt: string; restaurant: RestaurantItem }> }> {
+  // TODO: needs backend for user-specific data
+  return { items: [] }
 }
 
-export async function addBookmark(restaurantId: string) {
-  return apiFetch(`/bookmarks/${restaurantId}`, { method: 'POST' })
+export async function addBookmark(_restaurantId: string): Promise<void> {
+  // TODO: needs backend for user-specific data
+  throw new ApiError('NOT_IMPLEMENTED', '북마크 기능은 아직 준비 중입니다.')
 }
 
-export async function removeBookmark(restaurantId: string) {
-  return apiFetch(`/bookmarks/${restaurantId}`, { method: 'DELETE' })
+export async function removeBookmark(_restaurantId: string): Promise<void> {
+  // TODO: needs backend for user-specific data
+  throw new ApiError('NOT_IMPLEMENTED', '북마크 기능은 아직 준비 중입니다.')
 }
 
 // ─── Auth ───────────────────────────────────────────────────────────────────
+// TODO: needs backend for user-specific data
 
 export interface UserDto {
   id: string
@@ -210,20 +221,17 @@ export interface UserDto {
   notificationEnabled: boolean
 }
 
-export async function login(email: string, password: string) {
-  return apiFetch<{ user: UserDto; tokens: { accessToken: string; refreshToken: string } }>('/auth/login', {
-    method: 'POST',
-    body: JSON.stringify({ email, password }),
-  })
+export async function login(_email: string, _password: string): Promise<{ user: UserDto; tokens: { accessToken: string; refreshToken: string } }> {
+  // TODO: needs backend for user-specific data
+  throw new ApiError('NOT_IMPLEMENTED', '로그인 기능은 아직 준비 중입니다.')
 }
 
-export async function signup(email: string, password: string, name?: string) {
-  return apiFetch<{ user: UserDto; tokens: { accessToken: string; refreshToken: string } }>('/auth/signup', {
-    method: 'POST',
-    body: JSON.stringify({ email, password, name }),
-  })
+export async function signup(_email: string, _password: string, _name?: string): Promise<{ user: UserDto; tokens: { accessToken: string; refreshToken: string } }> {
+  // TODO: needs backend for user-specific data
+  throw new ApiError('NOT_IMPLEMENTED', '회원가입 기능은 아직 준비 중입니다.')
 }
 
-export async function getMe() {
-  return apiFetch<UserDto>('/auth/me')
+export async function getMe(): Promise<UserDto> {
+  // TODO: needs backend for user-specific data
+  throw new ApiError('NOT_IMPLEMENTED', '로그인이 필요합니다.')
 }
