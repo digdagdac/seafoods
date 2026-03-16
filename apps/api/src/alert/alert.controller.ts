@@ -20,16 +20,16 @@ import {
   ApiBearerAuth,
   ApiParam,
   ApiQuery,
-  ApiBody,
   ApiResponse,
 } from '@nestjs/swagger';
+import { SubscribeRequestDto } from '@safedeliver/dto';
 import { AlertService } from './alert.service';
 import { JwtAuthGuard } from '../common/guards/jwt-auth.guard';
-import { SubscriptionType } from '@prisma/client';
 
-class CreateSubscriptionBody {
-  subscriptionType!: SubscriptionType;
-  targetValue!: string;
+class SubscribeRequestBody implements SubscribeRequestDto {
+  regions?: string[];
+  categories?: string[];
+  restaurantIds?: string[];
 }
 
 @ApiTags('alerts')
@@ -39,14 +39,11 @@ class CreateSubscriptionBody {
 export class AlertController {
   constructor(private readonly alertService: AlertService) {}
 
-  // ── Notifications ──────────────────────────────────────────────────────
-
   @Get()
   @ApiOperation({ summary: '내 알림 목록' })
   @ApiQuery({ name: 'unreadOnly', required: false, type: Boolean })
   @ApiQuery({ name: 'cursor', required: false })
   @ApiQuery({ name: 'limit', required: false, type: Number })
-  @ApiResponse({ status: 200, description: '알림 목록 + 미읽음 수' })
   findAlerts(
     @Request() req: { user: { id: string } },
     @Query('unreadOnly') unreadOnly?: string,
@@ -61,15 +58,19 @@ export class AlertController {
     );
   }
 
-  @Patch(':alertId/read')
+  @Get('unread-count')
+  @ApiOperation({ summary: '안 읽은 알림 수' })
+  getUnreadCount(@Request() req: { user: { id: string } }) {
+    return this.alertService.getUnreadCount(req.user.id);
+  }
+
+  @Patch(':id/read')
   @HttpCode(HttpStatus.OK)
   @ApiOperation({ summary: '알림 읽음 처리' })
-  @ApiParam({ name: 'alertId' })
-  @ApiResponse({ status: 200, description: '읽음 처리 완료' })
-  @ApiResponse({ status: 404, description: '알림 없음' })
+  @ApiParam({ name: 'id' })
   markRead(
     @Request() req: { user: { id: string } },
-    @Param('alertId') alertId: string,
+    @Param('id') alertId: string,
   ) {
     return this.alertService.markRead(req.user.id, alertId);
   }
@@ -77,42 +78,33 @@ export class AlertController {
   @Patch('read-all')
   @HttpCode(HttpStatus.OK)
   @ApiOperation({ summary: '모든 알림 읽음 처리' })
-  @ApiResponse({ status: 200, description: '{ updated: number }' })
   markAllRead(@Request() req: { user: { id: string } }) {
     return this.alertService.markAllRead(req.user.id);
   }
 
-  // ── Subscriptions ──────────────────────────────────────────────────────
-
   @Get('subscriptions')
-  @ApiOperation({ summary: '알림 구독 목록' })
-  @ApiResponse({ status: 200, description: '구독 목록' })
+  @ApiOperation({ summary: '내 구독 목록' })
   findSubscriptions(@Request() req: { user: { id: string } }) {
     return this.alertService.findSubscriptions(req.user.id);
   }
 
-  @Post('subscriptions')
-  @ApiOperation({ summary: '알림 구독 추가' })
-  @ApiBody({ type: CreateSubscriptionBody })
-  @ApiResponse({ status: 201, description: '구독 추가 성공' })
-  @ApiResponse({ status: 409, description: '이미 구독 중' })
-  createSubscription(
+  @Post('subscribe')
+  @ApiOperation({ summary: '구독 등록' })
+  subscribe(
     @Request() req: { user: { id: string } },
-    @Body() body: CreateSubscriptionBody,
+    @Body() body: SubscribeRequestBody,
   ) {
-    return this.alertService.createSubscription(req.user.id, body);
+    return this.alertService.subscribe(req.user.id, body);
   }
 
-  @Delete('subscriptions/:subscriptionId')
+  @Delete('subscribe/:id')
   @HttpCode(HttpStatus.OK)
-  @ApiOperation({ summary: '알림 구독 삭제' })
-  @ApiParam({ name: 'subscriptionId' })
-  @ApiResponse({ status: 200, description: '구독 삭제 성공' })
-  @ApiResponse({ status: 404, description: '구독 없음' })
-  removeSubscription(
+  @ApiOperation({ summary: '구독 해제' })
+  @ApiParam({ name: 'id', description: '구독 ID' })
+  unsubscribe(
     @Request() req: { user: { id: string } },
-    @Param('subscriptionId') subscriptionId: string,
+    @Param('id') subscriptionId: string,
   ) {
-    return this.alertService.removeSubscription(req.user.id, subscriptionId);
+    return this.alertService.unsubscribe(req.user.id, subscriptionId);
   }
 }
