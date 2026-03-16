@@ -16,8 +16,8 @@ export class SearchService {
   constructor(private prisma: PrismaService) {}
 
   /**
-   * Unified search using pg_trgm similarity for fuzzy matching.
-   * Falls back to ilike when similarity score is not decisive.
+   * Prioritize pg_trgm similarity for ranking.
+   * Fallback to ILIKE matches when similarity score is low.
    */
   async search(query: UnifiedSearchQuery) {
     const { q, region, category, hasSanction, cursor, limit = 20 } = query;
@@ -29,24 +29,23 @@ export class SearchService {
 
     const sanitized = q.trim();
 
-    // Build optional filter clauses
     const regionClause = region
-      ? Prisma.sql`AND r.region_code LIKE ${region + '%'}`
+      ? Prisma.sql`AND r.region_code LIKE ${region + '%'} `
       : Prisma.empty;
 
     const categoryClause = category
-      ? Prisma.sql`AND r.category ILIKE ${'%' + category + '%'}`
+      ? Prisma.sql`AND r.category ILIKE ${'%' + category + '%'} `
       : Prisma.empty;
 
     const sanctionClause =
       hasSanction === true
-        ? Prisma.sql`AND r.total_sanctions > 0`
+        ? Prisma.sql`AND r.total_sanctions > 0 `
         : hasSanction === false
-          ? Prisma.sql`AND r.total_sanctions = 0`
+          ? Prisma.sql`AND r.total_sanctions = 0 `
           : Prisma.empty;
 
     const cursorClause = cursor
-      ? Prisma.sql`AND r.id > ${cursor}`
+      ? Prisma.sql`AND r.id > ${cursor} `
       : Prisma.empty;
 
     const results = await this.prisma.$queryRaw<
@@ -86,11 +85,17 @@ export class SearchService {
           ) AS similarity
         FROM restaurants r
         WHERE (
-          r.name ILIKE ${'%' + sanitized + '%'}
-          OR r.normalized_name ILIKE ${'%' + sanitized + '%'}
-          OR r.road_address ILIKE ${'%' + sanitized + '%'}
-          OR similarity(r.name, ${sanitized}) > 0.2
-          OR similarity(r.normalized_name, ${sanitized}) > 0.2
+          similarity(r.name, ${sanitized}) > 0.25
+          OR similarity(r.normalized_name, ${sanitized}) > 0.25
+          OR (
+            similarity(r.name, ${sanitized}) <= 0.25
+            AND similarity(r.normalized_name, ${sanitized}) <= 0.25
+            AND (
+              r.name ILIKE ${'%' + sanitized + '%'}
+              OR r.normalized_name ILIKE ${'%' + sanitized + '%'}
+              OR r.road_address ILIKE ${'%' + sanitized + '%'}
+            )
+          )
         )
         ${regionClause}
         ${categoryClause}
@@ -146,8 +151,11 @@ export class SearchService {
           similarity(r.normalized_name, ${sanitized}) AS similarity
         FROM restaurants r
         WHERE
-          r.normalized_name ILIKE ${'%' + sanitized + '%'}
-          OR similarity(r.normalized_name, ${sanitized}) > 0.2
+          similarity(r.normalized_name, ${sanitized}) > 0.25
+          OR (
+            similarity(r.normalized_name, ${sanitized}) <= 0.25
+            AND r.normalized_name ILIKE ${'%' + sanitized + '%'}
+          )
         ORDER BY similarity DESC, r.total_sanctions DESC
         LIMIT ${take}
       `,
