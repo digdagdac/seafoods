@@ -22,13 +22,24 @@ import {
   ApiQuery,
   ApiResponse,
 } from '@nestjs/swagger';
-import { SubscribeRequestDto } from '@safedeliver/dto';
 import { AlertService } from './alert.service';
 import { JwtAuthGuard } from '../common/guards/jwt-auth.guard';
+import { IsOptional, IsArray, IsString } from 'class-validator';
 
-class SubscribeRequestBody implements SubscribeRequestDto {
+class SubscribeRequestBody {
+  @IsOptional()
+  @IsArray()
+  @IsString({ each: true })
   regions?: string[];
+
+  @IsOptional()
+  @IsArray()
+  @IsString({ each: true })
   categories?: string[];
+
+  @IsOptional()
+  @IsArray()
+  @IsString({ each: true })
   restaurantIds?: string[];
 }
 

@@ -23,7 +23,7 @@ export class AlertStreamService {
       userStreams.add(subscriber);
       this.streams.set(userId, userStreams);
 
-      subscriber.next({ type: 'connected', data: { connected: true } });
+      subscriber.next({ type: 'connected', data: JSON.stringify({ connected: true }) });
       const heartbeat = setInterval(() => {
         subscriber.next({ type: 'ping', data: 'keepalive' });
       }, 25000);
@@ -50,7 +50,7 @@ export class AlertStreamService {
     }
 
     for (const stream of userStreams) {
-      stream.next({ type: 'alert', data: payload });
+      stream.next({ type: 'alert', data: JSON.stringify(payload) });
     }
   }
 }

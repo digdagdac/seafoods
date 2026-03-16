@@ -1,7 +1,7 @@
 'use client'
 
 import { useState, useEffect } from 'react'
-import { Map as MapIcon, Navigation, Search, Filter, List, GpsFixed, Loader2, AlertTriangle } from 'lucide-react'
+import { Map as MapIcon, Navigation, Search, Filter, List, Crosshair, Loader2, AlertTriangle } from 'lucide-react'
 import { Header } from '@/components/layout/header'
 import { useNearbyRestaurants } from '@/hooks/use-restaurants'
 import { RestaurantDto, RestaurantStatus } from '@safedeliver/shared-types'
@@ -94,7 +94,7 @@ export default function MapPage() {
                     onClick={() => {/* geolocation trigger */}}
                     className="w-12 h-12 bg-white rounded-2xl shadow-lg flex items-center justify-center text-navy focus-ring"
                 >
-                    <GpsFixed className={cn("w-6 h-6", isLocating && "animate-pulse")} />
+                    <Crosshair className={cn("w-6 h-6", isLocating && "animate-pulse")} />
                 </button>
             </div>
 

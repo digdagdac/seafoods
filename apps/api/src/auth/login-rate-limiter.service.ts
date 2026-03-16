@@ -1,4 +1,4 @@
-import { Injectable, TooManyRequestsException } from '@nestjs/common';
+import { Injectable, HttpException, HttpStatus } from '@nestjs/common';
 
 interface AttemptState {
   count: number;
@@ -23,7 +23,7 @@ export class LoginRateLimiterService {
 
     if (state.blockedUntil && state.blockedUntil > now) {
       const retryAfter = Math.ceil((state.blockedUntil - now) / 1000);
-      throw new TooManyRequestsException(`로그인 시도가 너무 많습니다. ${retryAfter}초 후 다시 시도해 주세요`);
+      throw new HttpException(`로그인 시도가 너무 많습니다. ${retryAfter}초 후 다시 시도해 주세요`, HttpStatus.TOO_MANY_REQUESTS);
     }
 
     if (now - state.firstAttemptAt > this.windowMs) {
