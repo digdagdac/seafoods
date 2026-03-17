@@ -7,7 +7,6 @@ import {
   PublicApiError,
 } from '@/lib/public-api'
 
-export const runtime = 'edge'
 
 export async function OPTIONS() {
   return new NextResponse(null, { status: 204, headers: corsHeaders })
