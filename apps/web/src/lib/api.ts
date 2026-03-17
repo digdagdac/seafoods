@@ -86,6 +86,40 @@ export async function getRestaurant(id: string) {
   return apiFetch<RestaurantItem>(`/restaurants/${id}`)
 }
 
+export interface RestaurantDetailItem {
+  id: string
+  name: string
+  normalizedName: string
+  category: string
+  roadAddress: string | null
+  regionName: string
+  status: string
+  totalSanctions: number
+  lastSanctionAt: string | null
+  phone: string | null
+  representative: string | null
+}
+
+export interface RestaurantDetailSanctionItem {
+  id: string
+  sanctionType: string
+  severity: string
+  violationContent: string
+  dispositionContent: string
+  dispositionDate: string
+  dispositionStartDate: string | null
+  dispositionEndDate: string | null
+  violatedLaw: string | null
+  dispositionAgency: string | null
+  restaurant: { id: string; name: string; category: string }
+}
+
+export async function getRestaurantDetail(id: string) {
+  return apiFetch<{ restaurant: RestaurantDetailItem; sanctions: RestaurantDetailSanctionItem[] }>(
+    `/restaurants/${id}`,
+  )
+}
+
 export async function getRestaurants() {
   return apiFetch<{ items: RestaurantItem[]; hasMore: boolean }>('/restaurants')
 }

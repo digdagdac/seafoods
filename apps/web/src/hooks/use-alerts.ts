@@ -1,19 +1,14 @@
-import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query'
-import { getAlerts, markAlertAsRead } from '@/lib/api'
+import { useQuery } from '@tanstack/react-query'
+import { getRecentSanctions } from '@/lib/api'
 
 export function useAlerts() {
   return useQuery({
-    queryKey: ['alerts'],
-    queryFn: getAlerts,
+    queryKey: ['alerts', 'sanctions'],
+    queryFn: () => getRecentSanctions({ limit: 30 }),
   })
 }
 
+// No-op kept for backward compatibility
 export function useMarkAlertAsRead() {
-  const queryClient = useQueryClient()
-  return useMutation({
-    mutationFn: markAlertAsRead,
-    onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: ['alerts'] })
-    },
-  })
+  return { mutate: (_id: string) => {} }
 }
