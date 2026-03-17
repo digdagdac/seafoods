@@ -96,14 +96,14 @@ function SearchContent() {
       <Header showBack title="검색 결과" />
 
       {/* Search bar */}
-      <div className="sticky top-14 z-30 bg-white border-b border-gray-100 px-4 py-3">
-        <SearchBar defaultValue={queryTerm} size="md" />
+      <div className="sticky top-14 z-30 bg-white border-b border-gray-100 px-4 py-3 shadow-sm">
+        <SearchBar defaultValue={queryTerm} size="md" className="w-full" />
       </div>
 
       {/* Filter chips — horizontally scrollable */}
-      <div className="sticky top-[calc(3.5rem+3.5rem)] z-20 bg-white border-b border-gray-100">
+      <div className="sticky top-[calc(3.5rem+4.25rem)] z-20 bg-white/95 backdrop-blur-md border-b border-gray-100">
         <div
-          className="flex items-center gap-2 px-4 py-2.5 overflow-x-auto scrollbar-none"
+          className="flex items-center gap-2 px-4 py-3 overflow-x-auto scrollbar-none"
           role="group"
           aria-label="검색 필터"
         >
@@ -112,15 +112,17 @@ function SearchContent() {
             onClick={() => setHasSanctionOnly(!hasSanctionOnly)}
             aria-pressed={hasSanctionOnly}
             className={cn(
-              'flex-shrink-0 chip flex items-center gap-1.5',
-              hasSanctionOnly ? 'chip-active' : 'chip-inactive'
+              'flex-shrink-0 min-h-[44px] px-4 rounded-2xl flex items-center gap-2 font-bold transition-all duration-200 text-sm shadow-sm border',
+              hasSanctionOnly 
+                ? 'bg-red-500 text-white border-red-600 scale-105' 
+                : 'bg-white text-gray-600 border-gray-200 active:bg-gray-50'
             )}
           >
-            <AlertTriangle className="w-3.5 h-3.5" />
+            <AlertTriangle className={cn("w-4 h-4", hasSanctionOnly ? "animate-pulse" : "")} />
             처분 이력만
           </button>
 
-          <div className="w-px h-4 bg-gray-200 mx-1 flex-shrink-0" />
+          <div className="w-px h-6 bg-gray-200 mx-1 flex-shrink-0" />
 
           {FILTER_OPTIONS.map((opt) => {
             const active = selectedCategory === opt.value
@@ -130,7 +132,12 @@ function SearchContent() {
                 type="button"
                 onClick={() => toggleCategory(opt.value)}
                 aria-pressed={active}
-                className={cn('flex-shrink-0 chip', active ? 'chip-active' : 'chip-inactive')}
+                className={cn(
+                  'flex-shrink-0 min-h-[44px] px-4 rounded-2xl font-bold transition-all duration-200 text-sm shadow-sm border',
+                  active 
+                    ? 'bg-navy text-white border-navy scale-105' 
+                    : 'bg-white text-gray-600 border-gray-200 active:bg-gray-50'
+                )}
               >
                 {opt.label}
               </button>
@@ -139,8 +146,8 @@ function SearchContent() {
         </div>
 
         {/* Sort options */}
-        <div className="flex items-center gap-1 px-4 pb-2.5" role="group" aria-label="정렬 기준">
-          <span className="text-xs text-gray-400 mr-1">정렬:</span>
+        <div className="flex items-center gap-1.5 px-4 pb-3" role="group" aria-label="정렬 기준">
+          <span className="text-xs font-bold text-gray-400 mr-1 uppercase tracking-wider">Sort by</span>
           {[
             { id: 'recent', label: '최신순' },
             { id: 'severity', label: '심각도순' },
@@ -152,10 +159,10 @@ function SearchContent() {
               onClick={() => setSortBy(opt.id as typeof sortBy)}
               aria-pressed={sortBy === opt.id}
               className={cn(
-                'text-xs px-2.5 py-1 rounded-full font-medium transition-colors duration-150',
+                'text-xs px-3.5 py-1.5 rounded-full font-bold transition-all duration-200 border',
                 sortBy === opt.id
-                  ? 'bg-navy text-white'
-                  : 'text-gray-500 hover:text-navy',
+                  ? 'bg-navy-tint text-navy border-navy/20'
+                  : 'text-gray-400 border-transparent hover:text-navy hover:bg-gray-50',
               )}
             >
               {opt.label}
@@ -165,13 +172,14 @@ function SearchContent() {
       </div>
 
       {/* Results */}
-      <div className="px-4 pt-4 pb-20">
+      <div className="px-4 pt-6 pb-24 max-w-screen-xl mx-auto">
         {/* Result count */}
-        <p className="text-xs text-gray-400 mb-3" aria-live="polite">
+        <p className="text-xs text-gray-400 mb-4 flex items-center gap-2" aria-live="polite">
+          <div className="w-1.5 h-1.5 rounded-full bg-emerald-500" />
           {queryTerm ? (
             <>
-              <span className="font-semibold text-navy">"{queryTerm}"</span> 검색 결과{' '}
-              <span className="font-semibold text-navy">{totalCount}건</span>
+              <span className="font-bold text-navy">"{queryTerm}"</span> 검색 결과{' '}
+              <span className="font-bold text-navy">{totalCount}건</span>
             </>
           ) : (
             `전체 ${totalCount}건`
@@ -184,26 +192,26 @@ function SearchContent() {
           isFetchingNextPage={isFetchingNextPage}
           fetchNextPage={fetchNextPage}
         >
-          <ul role="list" className="space-y-3" aria-label="검색 결과 목록">
+          <ul role="list" className="space-y-4" aria-label="검색 결과 목록">
             {restaurants.map((restaurant, idx) => (
               <li key={restaurant.id} className="animate-fade-in">
                 <a
                   href={`/restaurant/${restaurant.id}`}
-                  className="block card p-4 hover:shadow-card-hover transition-shadow duration-150 focus-ring"
+                  className="block card p-5 hover:shadow-card-hover transition-all duration-200 active:scale-[0.98] focus-ring border-navy/5"
                   aria-label={`${restaurant.name} 상세 보기`}
                 >
-                  <div className="flex items-start gap-3">
+                  <div className="flex items-start gap-4">
                     <div className="flex-1 min-w-0">
-                      <div className="flex items-center gap-2 mb-1">
+                      <div className="flex flex-wrap items-center gap-2 mb-2">
                         {restaurant.totalSanctions > 0 && (
-                          <span className="text-2xs font-bold text-severity-high bg-orange-50 px-1.5 py-0.5 rounded flex items-center gap-1">
+                          <span className="text-[10px] font-black text-white bg-red-500 px-2 py-0.5 rounded-md flex items-center gap-1 uppercase tracking-tight">
                             <AlertTriangle className="w-2.5 h-2.5" />
-                            처분 {restaurant.totalSanctions}건
+                            SANCTION {restaurant.totalSanctions}
                           </span>
                         )}
                         <span
                           className={cn(
-                            'text-2xs font-medium px-1.5 py-0.5 rounded-full',
+                            'text-[10px] font-black px-2 py-0.5 rounded-md uppercase tracking-tight',
                             STATUS_COLOR[restaurant.status],
                           )}
                         >
@@ -211,30 +219,32 @@ function SearchContent() {
                         </span>
                       </div>
 
-                      <h3 className="text-sm font-bold text-navy line-clamp-1 mb-0.5">
+                      <h3 className="text-base font-black text-navy line-clamp-1 mb-1 leading-tight">
                         {restaurant.name}
                       </h3>
 
-                      <p className="flex items-center gap-1 text-xs text-gray-500 mb-2">
-                        <MapPin className="w-3 h-3 flex-shrink-0" aria-hidden="true" />
+                      <p className="flex items-center gap-1.5 text-sm text-gray-500 mb-3">
+                        <MapPin className="w-3.5 h-3.5 flex-shrink-0 text-gray-400" aria-hidden="true" />
                         <span className="truncate">{restaurant.roadAddress}</span>
                       </p>
 
-                      <div className="flex items-center gap-3 text-2xs text-gray-400">
-                        <span>{restaurant.category}</span>
+                      <div className="flex items-center gap-3 text-xs text-gray-400 font-medium">
+                        <span className="px-2 py-0.5 bg-gray-100 rounded text-gray-500">{restaurant.category}</span>
                         {restaurant.lastSanctionAt && (
-                          <>
-                            <span className="text-gray-300">·</span>
-                            <span>최근 처분: {new Date(restaurant.lastSanctionAt).toLocaleDateString()}</span>
-                          </>
+                          <div className="flex items-center gap-1.5">
+                            <div className="w-1 h-1 rounded-full bg-gray-300" />
+                            <span>최근 처분: <span className="text-gray-600">{new Date(restaurant.lastSanctionAt).toLocaleDateString()}</span></span>
+                          </div>
                         )}
                       </div>
                     </div>
 
-                    <ChevronRight
-                      className="w-4 h-4 text-gray-300 flex-shrink-0 mt-1"
-                      aria-hidden="true"
-                    />
+                    <div className="h-20 flex items-center justify-center pl-2">
+                      <ChevronRight
+                        className="w-5 h-5 text-gray-300 flex-shrink-0"
+                        aria-hidden="true"
+                      />
+                    </div>
                   </div>
                 </a>
               </li>

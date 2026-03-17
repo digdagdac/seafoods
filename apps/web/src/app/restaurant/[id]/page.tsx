@@ -91,19 +91,21 @@ export default function RestaurantDetailPage() {
     <>
       <Header
         showBack
+        title={restaurant.name}
+        className="sticky top-0 z-50 bg-white/95 backdrop-blur-md border-b border-gray-100"
         rightSlot={
-          <div className="flex items-center gap-1">
+          <div className="flex items-center gap-1.5">
             <button
               type="button"
               aria-label="북마크 추가"
-              className="flex items-center justify-center w-9 h-9 rounded-xl text-gray-600 hover:bg-gray-100 transition-colors duration-150 focus-ring"
+              className="flex items-center justify-center w-10 h-10 rounded-2xl text-gray-600 hover:bg-gray-100 active:bg-gray-200 transition-all duration-200 focus-ring"
             >
               <Bookmark className="w-5 h-5" aria-hidden="true" />
             </button>
             <button
               type="button"
               aria-label="공유하기"
-              className="flex items-center justify-center w-9 h-9 rounded-xl text-gray-600 hover:bg-gray-100 transition-colors duration-150 focus-ring"
+              className="flex items-center justify-center w-10 h-10 rounded-2xl text-gray-600 hover:bg-gray-100 active:bg-gray-200 transition-all duration-200 focus-ring"
             >
               <Share2 className="w-5 h-5" aria-hidden="true" />
             </button>
@@ -111,19 +113,19 @@ export default function RestaurantDetailPage() {
         }
       />
 
-      <div className="animate-slide-up pb-20">
+      <div className="animate-slide-up pb-24 max-w-screen-md mx-auto">
 
         {/* Restaurant hero card */}
         <section
-          className="px-4 pt-2 pb-4"
+          className="px-4 pt-4 pb-6"
           aria-label={`${restaurant.name} 기본 정보`}
         >
-          <div className="card p-4">
+          <div className="card p-6 border-navy/5 shadow-sm">
             {/* Status + category row */}
-            <div className="flex items-center gap-2 mb-3">
+            <div className="flex flex-wrap items-center gap-2 mb-4">
               <span
                 className={cn(
-                  'flex items-center gap-1 text-xs font-semibold px-2.5 py-1 rounded-full border',
+                  'flex items-center gap-1.5 text-xs font-black px-3 py-1 rounded-lg border uppercase tracking-tight',
                   statusConfig.bg,
                   statusConfig.color,
                 )}
@@ -131,31 +133,35 @@ export default function RestaurantDetailPage() {
                 <StatusIcon className="w-3.5 h-3.5" aria-hidden="true" />
                 {statusConfig.label}
               </span>
-              <span className="text-xs text-gray-400 bg-gray-50 px-2 py-1 rounded-full border border-gray-100">
+              <span className="text-xs font-bold text-gray-500 bg-gray-100 px-3 py-1 rounded-lg border border-gray-200 uppercase tracking-tight">
                 {restaurant.category}
               </span>
             </div>
 
             {/* Name */}
-            <h1 className="text-xl font-black text-navy leading-tight mb-3 text-balance">
+            <h1 className="text-2xl font-black text-navy leading-tight mb-4 text-balance">
               {restaurant.name}
             </h1>
 
             {/* Address */}
             {restaurant.roadAddress && (
-              <div className="flex items-start gap-2 mb-2">
-                <MapPin className="w-4 h-4 text-gray-400 flex-shrink-0 mt-0.5" aria-hidden="true" />
-                <p className="text-sm text-gray-600">{restaurant.roadAddress}</p>
+              <div className="flex items-start gap-2.5 mb-3 group">
+                <div className="w-8 h-8 rounded-lg bg-gray-50 flex items-center justify-center flex-shrink-0 group-hover:bg-navy-tint transition-colors">
+                  <MapPin className="w-4 h-4 text-gray-400 group-hover:text-navy" aria-hidden="true" />
+                </div>
+                <p className="text-sm sm:text-base text-gray-600 font-medium leading-snug pt-1">{restaurant.roadAddress}</p>
               </div>
             )}
 
             {/* Last sanction date */}
             {restaurant.lastSanctionAt && (
-              <div className="flex items-center gap-2">
-                <Clock className="w-4 h-4 text-gray-400 flex-shrink-0" aria-hidden="true" />
-                <p className="text-sm text-gray-600">
+              <div className="flex items-center gap-2.5 group">
+                <div className="w-8 h-8 rounded-lg bg-gray-50 flex items-center justify-center flex-shrink-0 group-hover:bg-red-50 transition-colors">
+                  <Clock className="w-4 h-4 text-gray-400 group-hover:text-red-500" aria-hidden="true" />
+                </div>
+                <p className="text-sm sm:text-base text-gray-600 font-medium">
                   최근 처분:{' '}
-                  <time dateTime={restaurant.lastSanctionAt} className="font-medium">
+                  <time dateTime={restaurant.lastSanctionAt} className="font-black text-red-500">
                     {formatKoreanDate(restaurant.lastSanctionAt)}
                   </time>
                 </p>
@@ -166,13 +172,15 @@ export default function RestaurantDetailPage() {
 
         {/* Warning banner for active suspension */}
         {restaurant.status === RestaurantStatus.SUSPENDED && (
-          <section className="px-4 mb-4" aria-label="현재 영업정지 안내">
-            <div className="flex items-start gap-3 p-4 bg-orange-50 rounded-2xl border border-orange-200">
-              <ShieldAlert className="w-5 h-5 text-orange-600 flex-shrink-0 mt-0.5" aria-hidden="true" />
-              <div>
-                <p className="text-sm font-bold text-orange-800 mb-0.5">현재 영업정지 상태입니다</p>
+          <section className="px-4 mb-6" aria-label="현재 영업정지 안내">
+            <div className="flex items-start gap-4 p-5 bg-red-50 rounded-3xl border-2 border-red-100 shadow-sm animate-pulse">
+              <div className="w-10 h-10 rounded-2xl bg-red-500 flex items-center justify-center flex-shrink-0 shadow-lg shadow-red-200">
+                <ShieldAlert className="w-6 h-6 text-white" aria-hidden="true" />
+              </div>
+              <div className="pt-0.5">
+                <p className="text-base font-black text-red-900 mb-1">현재 영업정지 상태입니다</p>
                 {latestSanction && (
-                  <p className="text-xs text-orange-700 leading-relaxed">
+                  <p className="text-sm text-red-700 font-medium leading-relaxed">
                     {latestSanction.dispositionContent}
                   </p>
                 )}
@@ -183,55 +191,60 @@ export default function RestaurantDetailPage() {
 
         {/* Sanction stats */}
         <section
-          className="px-4 mb-4"
+          className="px-4 mb-8"
           aria-labelledby="stats-heading"
         >
-          <h2 id="stats-heading" className="section-title mb-3">처분 통계</h2>
+          <h2 id="stats-heading" className="section-title mb-4 px-1">처분 통계</h2>
           <div className="grid grid-cols-3 gap-3">
-            <div className="card p-3 text-center">
-              <p className="text-2xl font-black text-navy leading-none">{restaurant.totalSanctions}</p>
-              <p className="text-2xs text-gray-500 mt-1">총 처분 건수</p>
+            <div className="card p-5 text-center border-navy/5">
+              <p className="text-3xl font-black text-navy leading-none mb-2">{restaurant.totalSanctions}</p>
+              <p className="text-[10px] font-black text-gray-400 uppercase tracking-widest">Total</p>
             </div>
-            <div className="card p-3 text-center">
-              <p className="text-2xl font-black text-severity-high leading-none">
+            <div className="card p-5 text-center border-red-100 bg-red-50/30">
+              <p className="text-3xl font-black text-red-600 leading-none mb-2">
                 {sanctions.filter((s) => s.severity === SanctionSeverity.HIGH || s.severity === SanctionSeverity.CRITICAL).length}
               </p>
-              <p className="text-2xs text-gray-500 mt-1">고위험 처분</p>
+              <p className="text-[10px] font-black text-red-400 uppercase tracking-widest">High Risk</p>
             </div>
-            <div className="card p-3 text-center">
-              <p className="text-2xl font-black text-emerald-600 leading-none">
+            <div className="card p-5 text-center border-emerald-100 bg-emerald-50/30">
+              <p className="text-3xl font-black text-emerald-600 leading-none mb-2">
                 {sanctions.filter((s) => s.isVerified).length}
               </p>
-              <p className="text-2xs text-gray-500 mt-1">검증된 처분</p>
+              <p className="text-[10px] font-black text-emerald-400 uppercase tracking-widest">Verified</p>
             </div>
           </div>
         </section>
 
         {/* Risk assessment */}
-        <section className="px-4 mb-4" aria-label="위험도 평가">
+        <section className="px-4 mb-8" aria-label="위험도 평가">
           <div
             className={cn(
-              'flex items-start gap-3 p-4 rounded-2xl border',
+              'flex items-start gap-4 p-6 rounded-3xl border shadow-sm transition-all duration-300',
               hasCriticalHistory
-                ? 'bg-red-50 border-red-200'
+                ? 'bg-red-50 border-red-100'
                 : 'bg-navy-tint border-navy/10',
             )}
           >
-            {hasCriticalHistory ? (
-              <AlertTriangle className="w-5 h-5 text-severity-critical flex-shrink-0 mt-0.5" aria-hidden="true" />
-            ) : (
-              <ShieldCheck className="w-5 h-5 text-navy flex-shrink-0 mt-0.5" aria-hidden="true" />
-            )}
+            <div className={cn(
+              "w-12 h-12 rounded-2xl flex items-center justify-center flex-shrink-0 shadow-md",
+              hasCriticalHistory ? "bg-red-500 text-white" : "bg-navy text-white"
+            )}>
+              {hasCriticalHistory ? (
+                <AlertTriangle className="w-6 h-6" aria-hidden="true" />
+              ) : (
+                <ShieldCheck className="w-6 h-6" aria-hidden="true" />
+              )}
+            </div>
             <div>
               <p className={cn(
-                'text-sm font-bold mb-0.5',
-                hasCriticalHistory ? 'text-red-800' : 'text-navy',
+                'text-lg font-black mb-1 leading-tight',
+                hasCriticalHistory ? 'text-red-900' : 'text-navy',
               )}>
                 {hasCriticalHistory ? '주의가 필요한 업체입니다' : '상대적으로 양호한 업체입니다'}
               </p>
               <p className={cn(
-                'text-xs leading-relaxed',
-                hasCriticalHistory ? 'text-red-700' : 'text-navy/70',
+                'text-sm font-medium leading-relaxed',
+                hasCriticalHistory ? 'text-red-700/80' : 'text-navy/70',
               )}>
                 {hasCriticalHistory
                   ? '고위험 행정처분 이력이 있습니다. 주문 전 최신 처분 내용을 확인해 주세요.'
@@ -243,34 +256,45 @@ export default function RestaurantDetailPage() {
 
         {/* Sanctions timeline */}
         <section
-          className="px-4 mb-6"
+          className="px-4 mb-10"
           aria-labelledby="timeline-heading"
         >
-          <h2 id="timeline-heading" className="section-title mb-4">행정처분 이력</h2>
+          <div className="flex items-center justify-between mb-5 px-1">
+            <h2 id="timeline-heading" className="section-title">행정처분 이력</h2>
+            <span className="text-xs font-black text-gray-400 uppercase tracking-widest">Timeline</span>
+          </div>
 
           {isSanctionsLoading ? (
              <div className="space-y-4">
                {[1, 2].map(i => <div key={i} className="card h-24 animate-pulse bg-gray-50" />)}
              </div>
           ) : sanctions.length === 0 ? (
-            <div className="card p-8 text-center">
-              <ShieldCheck className="w-10 h-10 text-gray-300 mx-auto mb-3" aria-hidden="true" />
-              <p className="text-sm font-medium text-gray-500">행정처분 이력이 없습니다</p>
+            <div className="card p-12 text-center border-dashed border-2 bg-gray-50/50">
+              <div className="w-16 h-16 rounded-full bg-white flex items-center justify-center mx-auto mb-4 shadow-sm">
+                <ShieldCheck className="w-8 h-8 text-emerald-400" aria-hidden="true" />
+              </div>
+              <p className="text-base font-black text-gray-700 mb-1">행정처분 이력이 없습니다</p>
+              <p className="text-sm text-gray-400 font-medium">관리 기관에 의해 보고된 위반 사항이 없습니다.</p>
             </div>
           ) : (
             <div
-              className="card p-4"
+              className="card p-6 shadow-sm border-navy/5"
               role="list"
               aria-label="행정처분 이력 타임라인"
             >
-              {sanctions.map((sanction, idx) => (
-                <div key={sanction.id} role="listitem">
-                  <SanctionTimelineItem
-                    sanction={sanction}
-                    isLatest={idx === 0}
-                  />
-                </div>
-              ))}
+              <div className="space-y-0 relative">
+                {/* Visual timeline line */}
+                <div className="absolute left-[15px] top-2 bottom-2 w-0.5 bg-gray-100" aria-hidden="true" />
+                
+                {sanctions.map((sanction, idx) => (
+                  <div key={sanction.id} role="listitem">
+                    <SanctionTimelineItem
+                      sanction={sanction}
+                      isLatest={idx === 0}
+                    />
+                  </div>
+                ))}
+              </div>
             </div>
           )}
         </section>

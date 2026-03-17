@@ -60,24 +60,24 @@ function RegionalSummary() {
           <span className="text-xs text-gray-400">{summary.regionName}</span>
         </div>
 
-        <div className="grid grid-cols-3 gap-3 mb-3">
-          <div className="bg-navy-light rounded-xl p-3 text-center">
-            <p className="text-2xl font-black text-navy leading-none">
+        <div className="grid grid-cols-2 sm:grid-cols-3 gap-3 mb-4">
+          <div className="bg-navy-light rounded-2xl p-4 text-center border border-navy/5">
+            <p className="text-3xl font-black text-navy leading-none mb-1">
               {summary.totalSanctions}
             </p>
-            <p className="text-2xs text-gray-500 mt-1">누적 처분</p>
+            <p className="text-xs font-semibold text-gray-500">누적 처분</p>
           </div>
-          <div className="bg-red-50 rounded-xl p-3 text-center">
-            <p className="text-2xl font-black text-severity-critical leading-none">
+          <div className="bg-red-50 rounded-2xl p-4 text-center border border-red-100">
+            <p className="text-3xl font-black text-severity-critical leading-none mb-1">
               {summary.criticalCount}
             </p>
-            <p className="text-2xs text-gray-500 mt-1">심각</p>
+            <p className="text-xs font-semibold text-gray-500">심각</p>
           </div>
-          <div className="bg-orange-50 rounded-xl p-3 text-center">
-            <p className="text-2xl font-black text-severity-high leading-none">
+          <div className="bg-orange-50 rounded-2xl p-4 text-center border border-orange-100 col-span-2 sm:col-span-1">
+            <p className="text-3xl font-black text-severity-high leading-none mb-1">
               {summary.highCount}
             </p>
-            <p className="text-2xs text-gray-500 mt-1">높음</p>
+            <p className="text-xs font-semibold text-gray-500 text-center">심각도 높음</p>
           </div>
         </div>
 
@@ -166,28 +166,32 @@ export default function HomePage() {
       <Header showNotification />
 
       {/* Hero search section */}
-      <section className="bg-navy px-4 pt-4 pb-8" aria-label="음식점 검색">
-        <div className="mb-4">
-          <h2 className="text-xl font-black text-white leading-snug mb-1 text-balance">
-            안전한 배달 음식을<br />
-            <span className="text-navy-tint">직접 확인</span>하세요
-          </h2>
-          <p className="text-sm text-white/60">
-            전국 음식점 행정처분 이력을 실시간으로 제공합니다
-          </p>
+      <section className="bg-navy px-4 pt-6 pb-10" aria-label="음식점 검색">
+        <div className="max-w-screen-xl mx-auto">
+          <div className="mb-6">
+            <h2 className="text-2xl sm:text-3xl font-black text-white leading-tight mb-2 text-balance">
+              안전한 배달 음식을<br />
+              <span className="text-accent">직접 확인</span>하세요
+            </h2>
+            <p className="text-sm sm:text-base text-white/70">
+              전국 음식점 행정처분 이력을 실시간으로 제공합니다
+            </p>
+          </div>
+          <SearchBar size="lg" className="w-full" />
         </div>
-        <SearchBar size="lg" />
       </section>
 
-      <div className="px-4 -mt-4 space-y-5 animate-slide-up pb-20">
+      <div className="px-4 -mt-6 space-y-6 animate-slide-up pb-24 max-w-screen-xl mx-auto">
         <RegionalSummary />
 
         {/* Severity legend */}
         <section aria-labelledby="severity-legend-heading">
-          <h2 id="severity-legend-heading" className="section-title mb-3">
-            처분 심각도 안내
-          </h2>
-          <div className="grid grid-cols-2 gap-2">
+          <div className="flex items-center justify-between mb-3">
+            <h2 id="severity-legend-heading" className="section-title">
+              처분 심각도 안내
+            </h2>
+          </div>
+          <div className="grid grid-cols-2 lg:grid-cols-4 gap-2.5">
             {[
               { severity: SanctionSeverity.CRITICAL, desc: '영업취소·폐쇄명령' },
               { severity: SanctionSeverity.HIGH, desc: '영업정지 2개월 이상' },
@@ -196,10 +200,10 @@ export default function HomePage() {
             ].map(({ severity, desc }) => (
               <div
                 key={severity}
-                className={`flex items-center gap-2.5 p-3 rounded-xl border ${SEVERITY_BG[severity]}`}
+                className={`flex flex-col sm:flex-row items-start sm:items-center gap-2 p-3 rounded-2xl border transition-colors duration-200 ${SEVERITY_BG[severity]}`}
               >
                 <SeverityBadge severity={severity} variant="compact" />
-                <span className="text-2xs text-gray-600 leading-tight">{desc}</span>
+                <span className="text-[11px] sm:text-xs text-gray-600 font-medium leading-tight">{desc}</span>
               </div>
             ))}
           </div>
