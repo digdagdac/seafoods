@@ -84,8 +84,8 @@ function SearchContent() {
     // router.replace(`/search?${params.toString()}`, { scroll: false })
   }, [selectedCategory, hasSanctionOnly])
 
-  const restaurants = data?.pages.flatMap((page) => (page as any).restaurants as RestaurantDto[]) ?? []
-  const totalCount = (data?.pages[0] as any)?.totalCount ?? restaurants.length
+  const restaurants = data?.pages.flatMap((page) => (page as any).items as RestaurantDto[]) ?? []
+  const totalCount = (data?.pages[0] as any)?.total ?? restaurants.length
 
   function toggleCategory(cat: string) {
     setSelectedCategory(prev => prev === cat ? undefined : cat)

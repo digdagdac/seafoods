@@ -103,7 +103,8 @@ export interface SanctionItem {
 }
 
 export async function getRestaurantSanctions(restaurantId: string) {
-  return apiFetch<{ items: SanctionItem[] }>(`/sanctions?restaurantId=${restaurantId}`)
+  const data = await apiFetch<{ items: SanctionItem[] }>(`/sanctions?restaurantId=${restaurantId}`)
+  return data.items
 }
 
 export async function getRecentSanctions(query: { cursor?: string; limit?: number } = {}) {

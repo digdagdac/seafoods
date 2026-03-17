@@ -38,7 +38,7 @@ export default function MapPage() {
     coords ? { lat: coords.lat, lng: coords.lng, radius: 2000 } : { lat: 0, lng: 0, radius: 0 }
   )
 
-  const restaurants = data?.pages.flatMap(page => (page as any).restaurants as RestaurantDto[]) ?? []
+  const restaurants = data?.pages.flatMap(page => (page as any).items as RestaurantDto[]) ?? []
 
   return (
     <div className="flex flex-col h-screen overflow-hidden bg-gray-50">

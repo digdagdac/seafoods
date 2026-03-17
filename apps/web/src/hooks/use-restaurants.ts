@@ -1,14 +1,23 @@
 import { useInfiniteQuery, useQuery } from '@tanstack/react-query'
 import { searchRestaurants, getRestaurant, getNearbyRestaurants } from '@/lib/api'
-import type { SearchQuery, NearbyQuery } from '@safedeliver/shared-types'
+import type { NearbyQuery } from '@safedeliver/shared-types'
 
-export function useSearchRestaurants(query: SearchQuery) {
+export interface SearchRestaurantsQuery {
+  q?: string
+  region?: string
+  category?: string
+  hasSanction?: boolean
+  sort?: 'recent' | 'severity' | 'count'
+  limit?: number
+}
+
+export function useSearchRestaurants(query: SearchRestaurantsQuery) {
   return useInfiniteQuery({
     queryKey: ['restaurants', 'search', query],
-    queryFn: ({ pageParam }) => searchRestaurants({ ...query, cursor: pageParam }),
+    queryFn: ({ pageParam }) => searchRestaurants({ ...query, cursor: pageParam as string | undefined }),
     initialPageParam: undefined as string | undefined,
     getNextPageParam: (lastPage) => (lastPage.hasMore ? lastPage.cursor : undefined),
-    enabled: !!query.q,
+    enabled: true,
   })
 }
 
