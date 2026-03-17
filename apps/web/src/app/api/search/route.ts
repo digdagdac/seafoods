@@ -1,6 +1,6 @@
 import { NextRequest, NextResponse } from 'next/server'
 import {
-  fetchI2715,
+  fetchSanctions,
   mapRowToRestaurant,
   corsHeaders,
   cacheHeaders,
@@ -33,13 +33,12 @@ export async function GET(request: NextRequest) {
   const start = (page - 1) * perPage + 1
   const end = start + perPage - 1
 
-  const extraParams: Record<string, string> = {}
-  if (q) extraParams['BSSH_NM'] = q
-  if (region) extraParams['AREA_NM'] = region
-  if (category) extraParams['INDUTYPE_NM'] = category
+  const params: Record<string, string> = {}
+  if (q) params['PRCSCITYPOINT_BSSHNM'] = q
+  if (category) params['INDUTY_CD_NM'] = category
 
   try {
-    const { rows, totalCount } = await fetchI2715({ apiKey, start, end, extraParams })
+    const { rows, totalCount } = await fetchSanctions({ apiKey, start, end, params })
 
     const items = rows.map((row, i) => mapRowToRestaurant(row, start + i - 1))
 

@@ -1,30 +1,41 @@
 /**
- * Shared utility for calling the data.go.kr 식품위생 행정처분 API (I2715).
+ * 식품안전나라 Open API - I2630 행정처분결과(식품접객업)
+ * https://www.foodsafetykorea.go.kr/api/openApiInfo.do?svc_no=I2630
+ * URL: http://openapi.foodsafetykorea.go.kr/api/{keyId}/I2630/{dataType}/{startIdx}/{endIdx}
  */
 
-// ─── Raw API types ────────────────────────────────────────────────────────────
+// ─── Raw API types (I2630 필드) ──────────────────────────────────────────────
 
-export interface I2715Row {
-  BSSH_NM: string       // 업소명
-  ADDR: string          // 주소
-  VIOL_CN: string       // 위반내용
-  DSPN_CN: string       // 처분내용
-  DSPN_DT: string       // 처분일자 (YYYYMMDD)
-  LCNS_NO: string       // 인허가번호 (사업자번호 등)
-  INDUTYPE_NM: string   // 업종명
-  AREA_NM: string       // 지역명
+export interface I2630Row {
+  PRCSCITYPOINT_BSSHNM: string  // 업소명
+  INDUTY_CD_NM: string          // 업종
+  LCNS_NO: string               // 인허가번호
+  DSPS_DCSNDT: string           // 처분확정일자
+  DSPS_BGNDT: string            // 처분시작일
+  DSPS_ENDDT: string            // 처분종료일
+  DSPS_TYPECD_NM: string        // 처분유형
+  VILTCN: string                // 위반일자및위반내용
+  ADDR: string                  // 주소
+  TEL_NO: string                // 전화번호
+  PRSDNT_NM: string             // 대표자명
+  DSPSCN: string                // 처분내용
+  LAWORD_CD_NM: string          // 위반법령
+  PUBLIC_DT: string             // 공개기한
+  LAST_UPDT_DTM: string         // 최종수정일
+  DSPS_INSTTCD_NM: string       // 처분기관명
+  DSPSDTLS_SEQ: string          // 행정처분전산키
 }
 
-export interface I2715Result {
+export interface I2630Result {
   CODE: string
   MESSAGE: string
 }
 
-export interface I2715Response {
-  I2715: {
+export interface I2630Response {
+  I2630: {
     total_count: string
-    row?: I2715Row[]
-    RESULT: I2715Result
+    row?: I2630Row[]
+    RESULT: I2630Result
   }
 }
 
@@ -36,13 +47,12 @@ export interface RestaurantItem {
   normalizedName: string
   category: string
   roadAddress: string | null
-  jibunAddress: string | null
-  latitude: number | null
-  longitude: number | null
-  regionCode: string
+  regionName: string
   status: string
   totalSanctions: number
   lastSanctionAt: string | null
+  phone: string | null
+  representative: string | null
 }
 
 export interface SanctionItem {
@@ -52,6 +62,10 @@ export interface SanctionItem {
   violationContent: string
   dispositionContent: string
   dispositionDate: string
+  dispositionStartDate: string | null
+  dispositionEndDate: string | null
+  violatedLaw: string | null
+  dispositionAgency: string | null
   restaurant: { id: string; name: string; category: string }
 }
 
@@ -64,105 +78,134 @@ export interface SanctionStats {
 
 // ─── Helpers ──────────────────────────────────────────────────────────────────
 
-/** Convert YYYYMMDD string to ISO date string, or null if invalid. */
-export function parseKoreanDate(raw: string): string | null {
-  if (!raw || raw.length !== 8) return null
-  const y = raw.slice(0, 4)
-  const m = raw.slice(4, 6)
-  const d = raw.slice(6, 8)
+/** Convert YYYYMMDD or YYYY-MM-DD string to ISO date string. */
+export function parseDate(raw: string): string | null {
+  if (!raw) return null
+  const cleaned = raw.replace(/-/g, '').trim()
+  if (cleaned.length < 8) return null
+  const y = cleaned.slice(0, 4)
+  const m = cleaned.slice(4, 6)
+  const d = cleaned.slice(6, 8)
   const iso = `${y}-${m}-${d}`
-  const ts = Date.parse(iso)
-  return isNaN(ts) ? null : iso
+  return isNaN(Date.parse(iso)) ? null : iso
 }
 
-/** Derive severity from disposition content text. */
-export function deriveSeverity(dspnCn: string): string {
-  if (dspnCn.includes('취소') || dspnCn.includes('폐쇄')) return 'critical'
-  if (dspnCn.includes('영업정지')) {
-    const match = dspnCn.match(/(\d+)일/)
-    if (match) {
-      const days = parseInt(match[1], 10)
-      if (days >= 30) return 'high'
-      if (days >= 7) return 'medium'
-    }
-    return 'medium'
+/** 처분유형에서 severity 추출 */
+export function deriveSeverity(typeNm: string, content: string): string {
+  const combined = `${typeNm} ${content}`
+  if (combined.includes('허가취소') || combined.includes('폐쇄명령') || combined.includes('영업허가취소')) return 'CRITICAL'
+  if (combined.includes('영업정지')) {
+    const match = combined.match(/(\d+)개?월/)
+    if (match && parseInt(match[1], 10) >= 2) return 'HIGH'
+    const dayMatch = combined.match(/(\d+)일/)
+    if (dayMatch && parseInt(dayMatch[1], 10) >= 30) return 'HIGH'
+    return 'MEDIUM'
   }
-  if (dspnCn.includes('시정명령') || dspnCn.includes('과태료') || dspnCn.includes('경고')) return 'low'
-  return 'low'
+  if (combined.includes('과징금') || combined.includes('과태료')) return 'MEDIUM'
+  if (combined.includes('시정명령') || combined.includes('경고') || combined.includes('개선명령')) return 'LOW'
+  return 'LOW'
 }
 
-/** Derive a stable id from row fields (no UUID from API). */
-export function deriveRowId(row: I2715Row, index: number): string {
-  const base = `${row.LCNS_NO || ''}-${row.DSPN_DT || ''}-${index}`
-  // btoa works in both Edge runtime and Node; replace chars that are not URL-safe
+/** 처분유형 코드 매핑 */
+export function deriveSanctionType(typeNm: string): string {
+  if (typeNm.includes('영업정지')) return 'LICENSE_SUSPENSION'
+  if (typeNm.includes('허가취소') || typeNm.includes('영업허가취소')) return 'LICENSE_REVOCATION'
+  if (typeNm.includes('폐쇄명령') || typeNm.includes('폐쇄')) return 'CLOSURE_ORDER'
+  if (typeNm.includes('과징금') || typeNm.includes('과태료')) return 'FINE'
+  if (typeNm.includes('시정명령') || typeNm.includes('개선명령')) return 'IMPROVEMENT_ORDER'
+  if (typeNm.includes('경고')) return 'WARNING'
+  return 'OTHER'
+}
+
+/** Derive a stable id from the 행정처분전산키 or fallback. */
+export function deriveRowId(row: I2630Row, index: number): string {
+  if (row.DSPSDTLS_SEQ) return row.DSPSDTLS_SEQ
+  const base = `${row.LCNS_NO || ''}-${row.DSPS_DCSNDT || ''}-${index}`
   return btoa(encodeURIComponent(base)).replace(/[+/=]/g, '').slice(0, 24)
 }
 
-/** Map a raw I2715Row to our RestaurantItem shape. */
-export function mapRowToRestaurant(row: I2715Row, index: number): RestaurantItem {
-  const id = deriveRowId(row, index)
+/** 주소에서 지역명 추출 */
+function extractRegion(addr: string): string {
+  if (!addr) return ''
+  const match = addr.match(/^(서울|부산|대구|인천|광주|대전|울산|세종|경기|강원|충북|충남|전북|전남|경북|경남|제주)/)
+  return match ? match[1] : ''
+}
+
+/** Map a raw I2630Row to RestaurantItem */
+export function mapRowToRestaurant(row: I2630Row, index: number): RestaurantItem {
   return {
-    id,
-    name: row.BSSH_NM ?? '',
-    normalizedName: (row.BSSH_NM ?? '').replace(/\s+/g, '').toLowerCase(),
-    category: row.INDUTYPE_NM ?? '',
+    id: deriveRowId(row, index),
+    name: row.PRCSCITYPOINT_BSSHNM ?? '',
+    normalizedName: (row.PRCSCITYPOINT_BSSHNM ?? '').replace(/\s+/g, '').toLowerCase(),
+    category: row.INDUTY_CD_NM ?? '',
     roadAddress: row.ADDR || null,
-    jibunAddress: null,
-    latitude: null,
-    longitude: null,
-    regionCode: row.AREA_NM ?? '',
-    status: 'active',
+    regionName: extractRegion(row.ADDR),
+    status: 'ACTIVE',
     totalSanctions: 1,
-    lastSanctionAt: parseKoreanDate(row.DSPN_DT),
+    lastSanctionAt: parseDate(row.DSPS_DCSNDT),
+    phone: row.TEL_NO || null,
+    representative: row.PRSDNT_NM || null,
   }
 }
 
-/** Map a raw I2715Row to our SanctionItem shape. */
-export function mapRowToSanction(row: I2715Row, index: number): SanctionItem {
+/** Map a raw I2630Row to SanctionItem */
+export function mapRowToSanction(row: I2630Row, index: number): SanctionItem {
   const id = deriveRowId(row, index)
+  const typeNm = row.DSPS_TYPECD_NM ?? ''
+  const content = row.DSPSCN ?? ''
   return {
     id,
-    sanctionType: row.DSPN_CN ?? '',
-    severity: deriveSeverity(row.DSPN_CN ?? ''),
-    violationContent: row.VIOL_CN ?? '',
-    dispositionContent: row.DSPN_CN ?? '',
-    dispositionDate: parseKoreanDate(row.DSPN_DT) ?? row.DSPN_DT ?? '',
+    sanctionType: deriveSanctionType(typeNm),
+    severity: deriveSeverity(typeNm, content),
+    violationContent: row.VILTCN ?? '',
+    dispositionContent: content,
+    dispositionDate: parseDate(row.DSPS_DCSNDT) ?? '',
+    dispositionStartDate: parseDate(row.DSPS_BGNDT),
+    dispositionEndDate: parseDate(row.DSPS_ENDDT),
+    violatedLaw: row.LAWORD_CD_NM || null,
+    dispositionAgency: row.DSPS_INSTTCD_NM || null,
     restaurant: {
       id,
-      name: row.BSSH_NM ?? '',
-      category: row.INDUTYPE_NM ?? '',
+      name: row.PRCSCITYPOINT_BSSHNM ?? '',
+      category: row.INDUTY_CD_NM ?? '',
     },
   }
 }
 
-// ─── API caller ───────────────────────────────────────────────────────────────
+// ─── API caller ──────────────────────────────────────────────────────────────
 
 const BASE_URL = 'http://openapi.foodsafetykorea.go.kr/api'
+const SERVICE_ID = 'I2630'
 
-export interface FetchI2715Options {
+export interface FetchOptions {
   apiKey: string
   start?: number
   end?: number
-  /** Additional query params appended to the URL (e.g. BSSH_NM=치킨) */
-  extraParams?: Record<string, string>
+  /** 추가 쿼리 파라미터 (e.g. PRCSCITYPOINT_BSSHNM=치킨) */
+  params?: Record<string, string>
 }
 
-export interface FetchI2715Result {
-  rows: I2715Row[]
+export interface FetchResult {
+  rows: I2630Row[]
   totalCount: number
   resultCode: string
   resultMessage: string
 }
 
-export async function fetchI2715(opts: FetchI2715Options): Promise<FetchI2715Result> {
-  const { apiKey, start = 1, end = 20, extraParams = {} } = opts
+export async function fetchSanctions(opts: FetchOptions): Promise<FetchResult> {
+  const { apiKey, start = 1, end = 20, params = {} } = opts
 
-  const url = new URL(`${BASE_URL}/${apiKey}/I2715/json/${start}/${end}`)
-  for (const [k, v] of Object.entries(extraParams)) {
-    if (v) url.searchParams.set(k, v)
-  }
+  // URL format: /api/{keyId}/{serviceId}/{dataType}/{startIdx}/{endIdx}
+  let url = `${BASE_URL}/${apiKey}/${SERVICE_ID}/json/${start}/${end}`
 
-  const res = await fetch(url.toString(), {
+  // 추가 파라미터는 URL 경로 뒤에 붙임
+  const paramStr = Object.entries(params)
+    .filter(([, v]) => v)
+    .map(([k, v]) => `${k}=${encodeURIComponent(v)}`)
+    .join('&')
+  if (paramStr) url += `?${paramStr}`
+
+  const res = await fetch(url, {
     headers: { Accept: 'application/json' },
     next: { revalidate: 300 },
   })
@@ -170,20 +213,20 @@ export async function fetchI2715(opts: FetchI2715Options): Promise<FetchI2715Res
   if (!res.ok) {
     throw new PublicApiError(
       `upstream_http_${res.status}`,
-      `data.go.kr returned HTTP ${res.status}`,
+      `식품안전나라 API HTTP ${res.status}`,
     )
   }
 
-  const data = (await res.json()) as I2715Response
+  const data = (await res.json()) as I2630Response
 
-  const inner = data?.I2715
+  const inner = data?.I2630
   if (!inner) {
-    throw new PublicApiError('malformed_response', 'Unexpected API response shape')
+    throw new PublicApiError('malformed_response', 'API 응답 형식 오류')
   }
 
   const code = inner.RESULT?.CODE ?? ''
   if (code !== 'INFO-000' && code !== 'INFO-200') {
-    throw new PublicApiError(code, inner.RESULT?.MESSAGE ?? 'API error')
+    throw new PublicApiError(code, inner.RESULT?.MESSAGE ?? 'API 오류')
   }
 
   return {
@@ -194,7 +237,7 @@ export async function fetchI2715(opts: FetchI2715Options): Promise<FetchI2715Res
   }
 }
 
-// ─── Error type ───────────────────────────────────────────────────────────────
+// ─── Error type ──────────────────────────────────────────────────────────────
 
 export class PublicApiError extends Error {
   constructor(
@@ -206,10 +249,10 @@ export class PublicApiError extends Error {
   }
 }
 
-// ─── CORS headers ─────────────────────────────────────────────────────────────
+// ─── CORS / Cache headers ────────────────────────────────────────────────────
 
 export const corsHeaders: Record<string, string> = {
-  'Access-Control-Allow-Origin': process.env.NODE_ENV === 'production' ? '*' : '*',
+  'Access-Control-Allow-Origin': '*',
   'Access-Control-Allow-Methods': 'GET, OPTIONS',
   'Access-Control-Allow-Headers': 'Content-Type',
 }

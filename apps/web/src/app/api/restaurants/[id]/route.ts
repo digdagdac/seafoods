@@ -1,6 +1,6 @@
 import { NextRequest, NextResponse } from 'next/server'
 import {
-  fetchI2715,
+  fetchSanctions,
   mapRowToRestaurant,
   mapRowToSanction,
   corsHeaders,
@@ -36,23 +36,23 @@ export async function GET(
   }
 
   try {
-    // id may be a business licence number (LCNS_NO) or a URL-encoded name (BSSH_NM).
+    // id may be a business licence number (LCNS_NO) or a URL-encoded name (PRCSCITYPOINT_BSSHNM).
     // Try LCNS_NO first; fall back to name search.
-    let rows = await fetchI2715({
+    let rows = await fetchSanctions({
       apiKey,
       start: 1,
       end: 50,
-      extraParams: { LCNS_NO: id },
+      params: { LCNS_NO: id },
     }).then((r) => r.rows)
 
     if (rows.length === 0) {
       // Try interpreting id as a decoded restaurant name
       const name = decodeURIComponent(id)
-      rows = await fetchI2715({
+      rows = await fetchSanctions({
         apiKey,
         start: 1,
         end: 50,
-        extraParams: { BSSH_NM: name },
+        params: { PRCSCITYPOINT_BSSHNM: name },
       }).then((r) => r.rows)
     }
 

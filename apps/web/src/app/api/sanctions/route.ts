@@ -1,6 +1,6 @@
 import { NextRequest, NextResponse } from 'next/server'
 import {
-  fetchI2715,
+  fetchSanctions,
   mapRowToSanction,
   corsHeaders,
   cacheHeaders,
@@ -32,13 +32,12 @@ export async function GET(request: NextRequest) {
   const start = (page - 1) * perPage + 1
   const end = start + perPage - 1
 
-  const extraParams: Record<string, string> = {}
-  if (region) extraParams['AREA_NM'] = region
+  const params: Record<string, string> = {}
   // When filtering by restaurantId, we use LCNS_NO (인허가번호) field
-  if (restaurantId) extraParams['LCNS_NO'] = restaurantId
+  if (restaurantId) params['LCNS_NO'] = restaurantId
 
   try {
-    const { rows, totalCount } = await fetchI2715({ apiKey, start, end, extraParams })
+    const { rows, totalCount } = await fetchSanctions({ apiKey, start, end, params })
 
     // Rows from the API come sorted by date desc by default; maintain that order
     const items = rows.map((row, i) => mapRowToSanction(row, start + i - 1))
