@@ -1,7 +1,7 @@
 'use client'
 
-import { useState, useEffect } from 'react'
 import { useParams } from 'next/navigation'
+import { useLocalBookmarks } from '@/hooks/use-bookmarks-local'
 import {
   MapPin,
   Phone,
@@ -12,11 +12,9 @@ import {
   ShieldAlert,
   Bookmark,
   BookmarkCheck,
-  Loader2,
   Building2,
 } from 'lucide-react'
 import { Header } from '@/components/layout/header'
-import { SeverityBadge } from '@/components/ui/severity-badge'
 import { useRestaurantDetail } from '@/hooks/use-restaurant-detail'
 import type { RestaurantDetailSanctionItem } from '@/hooks/use-restaurant-detail'
 import { formatKoreanDate } from '@/lib/utils'
@@ -24,7 +22,6 @@ import { cn } from '@/lib/utils'
 
 // ─── Constants ────────────────────────────────────────────────────────────────
 
-const BOOKMARKS_KEY = 'safedeliver-bookmarks'
 
 const SANCTION_TYPE_LABELS: Record<string, string> = {
   LICENSE_SUSPENSION: '영업정지',
@@ -215,32 +212,14 @@ export default function RestaurantDetailPage() {
 
   const { restaurant, sanctions, isLoading, error } = useRestaurantDetail(id)
 
-  const [isBookmarked, setIsBookmarked] = useState(false)
-
-  // Load bookmark state from localStorage
-  useEffect(() => {
-    try {
-      const stored = localStorage.getItem(BOOKMARKS_KEY)
-      if (stored) {
-        const bookmarks: string[] = JSON.parse(stored)
-        setIsBookmarked(bookmarks.includes(id))
-      }
-    } catch {
-      // ignore
-    }
-  }, [id])
+  const { addBookmark, removeBookmark, isBookmarked: checkBookmarked } = useLocalBookmarks()
+  const bookmarked = checkBookmarked(id)
 
   function toggleBookmark() {
-    try {
-      const stored = localStorage.getItem(BOOKMARKS_KEY)
-      const bookmarks: string[] = stored ? JSON.parse(stored) : []
-      const next = isBookmarked
-        ? bookmarks.filter((b) => b !== id)
-        : [...bookmarks, id]
-      localStorage.setItem(BOOKMARKS_KEY, JSON.stringify(next))
-      setIsBookmarked(!isBookmarked)
-    } catch {
-      // ignore
+    if (bookmarked) {
+      removeBookmark(id)
+    } else if (restaurant) {
+      addBookmark({ id, name: restaurant.name, category: restaurant.category })
     }
   }
 
@@ -287,15 +266,15 @@ export default function RestaurantDetailPage() {
           <button
             type="button"
             onClick={toggleBookmark}
-            aria-label={isBookmarked ? '북마크 제거' : '북마크 추가'}
+            aria-label={bookmarked ? '북마크 제거' : '북마크 추가'}
             className={cn(
               'flex items-center justify-center w-10 h-10 rounded-2xl transition-all duration-200',
-              isBookmarked
+              bookmarked
                 ? 'text-navy bg-navy/10 hover:bg-navy/20'
                 : 'text-gray-600 hover:bg-gray-100 active:bg-gray-200',
             )}
           >
-            {isBookmarked ? (
+            {bookmarked ? (
               <BookmarkCheck className="w-5 h-5" aria-hidden="true" />
             ) : (
               <Bookmark className="w-5 h-5" aria-hidden="true" />
